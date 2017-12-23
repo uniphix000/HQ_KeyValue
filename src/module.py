@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from torch import optim
 from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
-
+from datautils import use_cuda
 
 class Encoder(nn.Module):
     def __init__(self, embed_size, hidden_size, dropout, lang):
@@ -93,7 +93,7 @@ class EncoderDecoder(nn.Module):
         self.loss = nn.NLLLoss()
 
 
-    def train(self, batch_input, batch_output, sentence_lens, encoder, decoder, pad_idx, embed_size):
+    def forward(self, batch_input, batch_output, sentence_lens, encoder, decoder, pad_idx, embed_size, length_limitation=100):
         '''
 
         :param batch_input: [[],] (b_s, m_l)
@@ -101,17 +101,27 @@ class EncoderDecoder(nn.Module):
         :return:
         '''
         batch_size = len(batch_input)
-        max_length = batch_output.size()[1]
+        max_length = batch_output.size()[1] if self.training else length_limitation
         encoder_outputs, (h_last, c_last) = encoder.forward(batch_input, sentence_lens, pad_idx)  # 这里encoder_outputs是双向的
-        decoder_input = Variable(torch.LongTensor([0]*batch_size).view(batch_size))
+        decoder_input = Variable(torch.LongTensor([0]*batch_size).view(batch_size)).cuda() if use_cuda else \
+            Variable(torch.LongTensor([0]*batch_size).view(batch_size))
         h_c = (h_last[0], c_last[0])  #fixme 为什么要取0
         loss = 0
+        predict_box = []
         for i in range(max_length - 1):
             y_t, h_c = decoder.forward(decoder_input, h_c, encoder_outputs, True)  # (batch_size, V)
-            decoder_input = batch_output.transpose(0,1)[i]
-            loss += self.loss(y_t, decoder_input)
-        return loss
+            if self.training:
+                decoder_input = batch_output.transpose(0,1)[i]
+                loss += self.loss(y_t, decoder_input)
+            else:
+                _, predict_input = torch.max(y_t, 1)  # (batch_size, 1)
+                decoder_input = predict_input
+                predict_box.append(predict_input.data[:])  # [[],]
 
+        if self.training:
+            return loss
+        else:
+            return predict_box
 
 
 
