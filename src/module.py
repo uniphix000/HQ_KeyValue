@@ -71,6 +71,8 @@ class AttnDecoder(nn.Module):
         h_t, c_t = self.lstmcell(input, h_c)  # input:(b_s, e_s) h_c:元组,应该变为(b_s, h_s) h_t, c_t:(b_s, h_s)
         if (flag == True):
             #h_t = h_t.unsqueeze(1)  # (b_s, 1, h_s)
+            #print (encoder_outputs.size()[1])
+            #print (h_t.unsqueeze(1))
             h_t_extend = torch.cat([h_t.unsqueeze(1)] * encoder_outputs.size()[1], 1)  # (b_s, m_l, h_s)
             u_t = self.attn(torch.cat((encoder_outputs, h_t_extend), 2))  # (b_s, m_l, 1)
             a_t = self.softmax(u_t)

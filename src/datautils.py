@@ -51,7 +51,7 @@ def data_preprocess(path):
     :return:
     '''
 
-    train_path = os.path.join(path, 'kvret_train_public(copy).json')
+    train_path = os.path.join(path, 'kvret_train_public.json')
     valid_path = os.path.join(path, 'kvret_dev_public.json')
     test_path = os.path.join(path, 'kvret_test_public.json')
 
@@ -224,10 +224,11 @@ def sentence_to_idx(lang, instances):
     return idx_instances
 
 
-def generate_batch(instances, batch_size, pad_idx):
+def generate_batch(instances, batch_gold, batch_size, pad_idx):
     '''
 
     :param instances: [([],[]),]
+    :param batch_gold:
     :param pad_idx:
     :return: [[],] (batch_size, max_length)
     '''
@@ -236,10 +237,14 @@ def generate_batch(instances, batch_size, pad_idx):
     for (input, output) in instances:
         batch_input.append(input)
         batch_output.append(output)
+    batch_gold_output = []
+    for (_, gold_output) in batch_gold:
+        batch_gold_output.append(gold_output)
     lst = range(batch_size)
     lst = sorted(lst, key = lambda d: -len(batch_input[d]))
     batch_input = [batch_input[ids] for ids in lst]
     batch_output = [batch_output[ids] for ids in lst]
+    batch_gold_output = [batch_gold_output[ids] for ids in lst]
 
     input_max_length = len(batch_input[0])
     output_max_length = max([len(batch_output[i]) for i in range(batch_size)])
@@ -250,7 +255,7 @@ def generate_batch(instances, batch_size, pad_idx):
     input = Variable(torch.LongTensor(input)).cuda() if use_cuda else Variable(torch.LongTensor(input))
     output = Variable(torch.LongTensor(output)).cuda() if use_cuda else Variable(torch.LongTensor(output))
     sentence_lens = [len(batch_input[i]) for i in range(batch_size)]
-    return input, output, sentence_lens
+    return input, output, batch_gold_output, sentence_lens
 
 
 
