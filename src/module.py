@@ -114,6 +114,7 @@ class EncoderDecoder(nn.Module):
             y_t, h_c = decoder.forward(decoder_input, h_c, encoder_outputs, True)  # (batch_size, V)
             if self.training:
                 decoder_input = batch_output.transpose(0,1)[i]
+
                 loss += self.loss(y_t, decoder_input)
             else:
                 _, predict_input = torch.max(y_t, 1)  # (batch_size, 1)

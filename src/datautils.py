@@ -11,6 +11,7 @@ from torch.autograd import Variable
 import torch
 
 use_cuda = torch.cuda.is_available()
+oov = 1
 
 def preprocess(path):
     '''
@@ -96,7 +97,7 @@ class Lang:
     def __init__(self):
         self.word2idx = {'pad':0, 'oov':1, '<BOS>':2, '<EOS>':3}
         self.idx2word = {}
-        self.word_size = 2
+        self.word_size = 4
 
     def add_word(self, word):
         '''
@@ -128,8 +129,7 @@ class Lang:
     def sentence_to_idx(self, sentence):
         '''
         '''
-        oov = 0
-        return [self.word2idx.get(word, oov) for word in sentence.split()]
+        return [self.word2idx.get(word, 1) for word in sentence.split()]
 
 
 def generate_dict(keys, train_dialogs, lang, value_to_abstract_keys):
@@ -249,13 +249,13 @@ def generate_batch(instances, batch_gold, batch_size, pad_idx):
     input_max_length = len(batch_input[0])
     output_max_length = max([len(batch_output[i]) for i in range(batch_size)])
 
-    input = [batch_input[i] + [pad_idx] * (input_max_length - len(batch_input[i])) for i in range(batch_size)]
-    output = [batch_output[i] + [pad_idx] * (output_max_length - len(batch_output[i])) for i in range(batch_size)]
+    batch_input = [batch_input[i] + [pad_idx] * (input_max_length - len(batch_input[i])) for i in range(batch_size)]
+    batch_output = [batch_output[i] + [pad_idx] * (output_max_length - len(batch_output[i])) for i in range(batch_size)]
 
-    input = Variable(torch.LongTensor(input)).cuda() if use_cuda else Variable(torch.LongTensor(input))
-    output = Variable(torch.LongTensor(output)).cuda() if use_cuda else Variable(torch.LongTensor(output))
+    batch_input = Variable(torch.LongTensor(batch_input)).cuda() if use_cuda else Variable(torch.LongTensor(batch_input))
+    batch_output = Variable(torch.LongTensor(batch_output)).cuda() if use_cuda else Variable(torch.LongTensor(batch_output))
     sentence_lens = [len(batch_input[i]) for i in range(batch_size)]
-    return input, output, batch_gold_output, sentence_lens
+    return batch_input, batch_output, batch_gold_output, sentence_lens
 
 
 

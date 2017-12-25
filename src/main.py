@@ -24,10 +24,10 @@ def main():
     cmd.add_argument('--embed_size', help='', type=int, default=100)
     cmd.add_argument('--batch_size', help='', type=int, default=32)
     cmd.add_argument('--lr', help='', type=float, default=0.001)
-    cmd.add_argument('--lr_decay', help='', type=float, default=0.95)
+    cmd.add_argument('--lr_decay', help='', type=float, default=1.0)
     cmd.add_argument('--max_epoch', help='', type=int, default=200)
     cmd.add_argument('--seed', help='', type=int, default=1234)
-    cmd.add_argument('--dropout', help='', type=float, default=0)
+    cmd.add_argument('--dropout', help='', type=float, default=0.4)
     cmd.add_argument('--bleu_path', help='', default='../bleu/')
 
 
@@ -74,11 +74,14 @@ def main():
     encoder_optimizer = optim.Adam(encoder.parameters(), lr=args.lr)
     decoder_optimizer = optim.Adam(decoder.parameters(), lr=args.lr)
     # train
+    best_bleu_score = 0
     order = list(range(len(train_instances_idx)))
     for i in range(args.max_epoch):
         logging.info('--------------------Round {0}---------------------'.format(i))
         random.shuffle(order)
         start_id = 0
+        count = 0
+        total_loss = 0
         for start_id in range(0, train_instances_size, args.batch_size):
             end_id = start_id + args.batch_size if start_id + args.batch_size < train_instances_size else train_instances_size
             batch_size = end_id - start_id
@@ -93,14 +96,22 @@ def main():
             encoder.zero_grad()
             decoder.zero_grad()
             loss = encoderdecoder.forward(batch_input, batch_output, sentence_lens, encoder, decoder, lang.word2idx['pad'], args.embed_size)
-            logging.info('loss: {0}'.format(loss.data[0]))
             loss.backward()
             encoder_optimizer.step()
             decoder_optimizer.step()
 
+            total_loss += loss.data
+            count += 1
+
+            # if (count % 100 == 0):
+            #     logging.info('average loss: {0}'.format(total_loss*1.0/count))
+
         bleu_score = evaluate(encoder, decoder, encoderdecoder, valid_instances_idx, train_instances, lang, \
                               args.batch_size, args.embed_size, args.hidden_size, args.bleu_path)
         logging.info('bleu score: {0}'.format(bleu_score))
+        best_bleu_score = max(best_bleu_score, bleu_score)
+    logging.info('Trianing complete! best bleu score: {0}'.format(best_bleu_score))
+
 
 def evaluate(encoder, decoder, encoderdecoder, instances_idx, instances, lang, \
                               batch_size, embed_size, hidden_size, bleu_path):
@@ -163,7 +174,6 @@ def transfor_idx_to_sentences(predict_all, gold_all, lang):
     gold_sentences = []
     for predict_batch in predict_all:
         batch_size = len(predict_batch[0])
-        #print ('one batch',batch.size())
         sentences_idx = torch.cat([col.view(batch_size, -1) for col in predict_batch], 1)
         for sentence_idx in sentences_idx:
             sentence = ''
@@ -179,8 +189,6 @@ def transfor_idx_to_sentences(predict_all, gold_all, lang):
             gold_sentences.append(gold_sentence)
 
     return predict_sentences, gold_sentences
-
-
 
 
 
