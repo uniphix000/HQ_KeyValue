@@ -73,8 +73,9 @@ def main():
     encoderdecoder = encoderdecoder.cuda() if use_cuda else encoderdecoder
     encoder_optimizer = optim.Adam(encoder.parameters(), lr=args.lr)
     decoder_optimizer = optim.Adam(decoder.parameters(), lr=args.lr)
+
     # train
-    best_bleu_score = 0
+    best_valid_bleu_score, best_test_bleu_score = 0, 0
     order = list(range(len(train_instances_idx)))
     for i in range(args.max_epoch):
         logging.info('--------------------Round {0}---------------------'.format(i))
@@ -106,11 +107,18 @@ def main():
             # if (count % 100 == 0):
             #     logging.info('average loss: {0}'.format(total_loss*1.0/count))
 
-        bleu_score = evaluate(encoder, decoder, encoderdecoder, valid_instances_idx, train_instances, lang, \
+        valid_bleu_score = evaluate(encoder, decoder, encoderdecoder, valid_instances_idx, valid_instances, lang, \
                               args.batch_size, args.embed_size, args.hidden_size, args.bleu_path)
-        logging.info('bleu score: {0}'.format(bleu_score))
-        best_bleu_score = max(best_bleu_score, bleu_score)
-    logging.info('Trianing complete! best bleu score: {0}'.format(best_bleu_score))
+        if (valid_bleu_score > best_valid_bleu_score):
+            test_bleu_score = evaluate(encoder, decoder, encoderdecoder, test_instances_idx, test_instances, lang, \
+                      args.batch_size, args.embed_size, args.hidden_size, args.bleu_path)
+            best_test_bleu_score = max(best_test_bleu_score, test_bleu_score)
+            logging.info('New Record! test bleu score now: {0} best test bleu score ever: {1}'.format(\
+                test_bleu_score, best_test_bleu_score))
+        best_valid_bleu_score = max(best_valid_bleu_score, valid_bleu_score)
+        logging.info('valid bleu score: {0} best valid bleu score ever: {1}'.format(valid_bleu_score, best_valid_bleu_score))
+    logging.info('Trianing complete! best valid bleu score: {0} best test bleu score : {1}'.format(best_valid_bleu_score, \
+                                                                                            best_test_bleu_score))
 
 
 def evaluate(encoder, decoder, encoderdecoder, instances_idx, instances, lang, \
@@ -149,16 +157,16 @@ def evaluate(encoder, decoder, encoderdecoder, instances_idx, instances, lang, \
         gold_all.append(batch_gold_output)
     predict_sentences, gold_sentences = transfor_idx_to_sentences(predict_all, gold_all, lang)
     with codecs.open(os.path.join(bleu_path, 'predict.txt'), 'w', encoding='utf-8') as fp:
-        fp.write('\n'.join(predict_sentences))
+        fp.write('\n\n'.join(predict_sentences))
         fp.close()
     with codecs.open(os.path.join(bleu_path, 'gold.txt'), 'w', encoding='utf-8') as fg:
-        fg.write('\n'.join(gold_sentences))
+        fg.write('\n\n'.join(gold_sentences))
         fg.close()
 
     p = subprocess.Popen(['perl', '../bleu/multi-bleu.pl', '../bleu/gold.txt'], stdin=open('../bleu/predict.txt'), stdout=subprocess.PIPE)
     # 原来的命令<代表重定向,相当于开了一个
     for line in p.stdout.readlines():
-        return line
+        return (float(line.split()[0][:-1]))
 
 
 
