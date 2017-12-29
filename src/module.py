@@ -20,12 +20,16 @@ class Encoder(nn.Module):
         self.embedding = nn.Embedding(self.V, self.embed_size)
         self.lstm = nn.LSTM(self.embed_size, self.hidden_size, batch_first=True)
 
-    def forward(self, input, sentence_lens, pad_idx):
+    def forward(self, input, sentence_lens, keys, pad_idx):
         '''
-
+        这里要得到kj
+        :param: keys: [(,),...] 每个key已经被idx表示了,而keys里的每个元素都是词典中前2kv个word中的某一个, (kv, 2, 1)
         :param input: (batch_size, max_length)
         :return:
         '''
+        embed_key = self.embedding(keys.squeeze(2))
+        k = torch.sum(embed_key, 1)  # (kv, embed_size)
+
         embed = self.embedding(input)
         input = self.dropout(embed)
         batch_input_packed = pack_padded_sequence(input, sentence_lens, batch_first=True)  # fixme
@@ -33,7 +37,7 @@ class Encoder(nn.Module):
         encoder_outputs_packed, (h_last, c_last) = self.lstm(batch_input_packed)
         encoder_outputs, _ = pad_packed_sequence(encoder_outputs_packed, batch_first=True)  # fixme 怎么指定pad_idx
 
-        return encoder_outputs, (h_last, c_last)
+        return encoder_outputs, (h_last, c_last), k
 
 
 class AttnDecoder(nn.Module):
@@ -51,12 +55,19 @@ class AttnDecoder(nn.Module):
             nn.Tanh(),
             nn.Linear(self.embed_size, 1)
         )
+        self.attn_key = nn.Sequential(
+            nn.Linear(self.embed_size + self.hidden_size, self.embed_size),
+            nn.Tanh(),
+            nn.Linear(self.embed_size, self.embed_size),
+            nn.Tanh(),
+            nn.Linear(self.embed_size, 1)
+        )
         self.softmax = nn.LogSoftmax()
         self.attn_linear = nn.Linear(2*self.hidden_size, self.V)
         self.linear = nn.Linear(2*self.hidden_size, self.V)
         self.embedding = nn.Embedding(self.V, self.embed_size)
 
-    def forward(self, input, h_c, encoder_outputs, flag=True):
+    def forward(self, input, h_c, encoder_outputs, k, flag=True):
         '''
 
         :param input:
@@ -77,7 +88,16 @@ class AttnDecoder(nn.Module):
             u_t = self.attn(torch.cat((encoder_outputs, h_t_extend), 2))  # (b_s, m_l, 1)
             a_t = self.softmax(u_t)
             h_t_ = (torch.sum((a_t * encoder_outputs), 1)).squeeze(1)  # (b_s, h_s)
-            o_t = self.linear(torch.cat((h_t, h_t_), 1))  # (batch_size, V)
+            batch_size = len(h_t_)
+            kv = len(k)
+            h_t__extend = torch.cat([h_t_.unsqueeze(1)] * kv, 1)  # (b_s, kv, h_s)
+            k_extend = torch.cat([k.unsqueeze(0)] * batch_size, 0)  # (b_s, kv, e_s)
+            u_k_t = self.attn_key(torch.cat((h_t__extend, k_extend), 2))  # (b_s, kv, 1)
+            tmp = Variable(torch.FloatTensor([0.0] * batch_size * (self.V - kv)).view(batch_size, \
+                         -1, 1))
+            tmp = tmp.cuda() if use_cuda else tmp
+            v_k_t = torch.cat([tmp, u_k_t], 1).squeeze(2)  # (b_s, V)
+            o_t = self.linear(torch.cat((h_t, h_t_), 1)) + v_k_t  # (batch_size, V)
             y_t = self.softmax(o_t)  # 用于预测下一个word
         else:
             o_t = self.linear(h_t)
@@ -92,10 +112,10 @@ class EncoderDecoder(nn.Module):
         self.embed_size = embed_size
         self.hidden = hidden_size
         self.dropout = dropout
-        self.loss = nn.NLLLoss()
+        self.loss = nn.CrossEntropyLoss()
 
 
-    def forward(self, batch_input, batch_output, sentence_lens, encoder, decoder, pad_idx, embed_size, length_limitation=100):
+    def forward(self, batch_input, batch_output, sentence_lens, keys, encoder, decoder, pad_idx, embed_size, length_limitation=100):
         '''
 
         :param batch_input: [[],] (b_s, m_l)
@@ -104,14 +124,14 @@ class EncoderDecoder(nn.Module):
         '''
         batch_size = len(batch_input)
         max_length = batch_output.size()[1] if self.training else length_limitation
-        encoder_outputs, (h_last, c_last) = encoder.forward(batch_input, sentence_lens, pad_idx)  # 这里encoder_outputs是双向的
+        encoder_outputs, (h_last, c_last), k = encoder.forward(batch_input, sentence_lens, keys, pad_idx)  # 这里encoder_outputs是双向的
         decoder_input = Variable(torch.LongTensor([0]*batch_size).view(batch_size)).cuda() if use_cuda else \
             Variable(torch.LongTensor([0]*batch_size).view(batch_size))
         h_c = (h_last[0], c_last[0])  #fixme 为什么要取0
         loss = 0
         predict_box = []
         for i in range(max_length - 1):
-            y_t, h_c = decoder.forward(decoder_input, h_c, encoder_outputs, True)  # (batch_size, V)
+            y_t, h_c = decoder.forward(decoder_input, h_c, encoder_outputs, k, True)  # (batch_size, V)
             if self.training:
                 decoder_input = batch_output.transpose(0,1)[i]
 

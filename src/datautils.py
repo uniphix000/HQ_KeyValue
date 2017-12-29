@@ -93,6 +93,22 @@ def key_extraction(train_dialogs, path):
     return keys, triples, entities, value_to_abstract_keys
 
 
+def key_to_idx(lang, underlined_keys):
+    '''
+
+    :param lang:
+    :param underlined_keys:
+    :return:
+    '''
+    keys_idx = []
+    for (key_0, key_1) in underlined_keys:
+        (key_0_ul, key_1_ul) = ([lang.word2idx[key_0]],[lang.word2idx[key_1]])
+        keys_idx.append((key_0_ul, key_1_ul))
+    keys_idx = Variable(torch.LongTensor(keys_idx))
+    keys_idx = keys_idx.cuda() if use_cuda else keys_idx
+    return keys_idx
+
+
 class Lang:
     def __init__(self):
         self.word2idx = {'pad':0, 'oov':1, '<BOS>':2, '<EOS>':3}
@@ -140,9 +156,13 @@ def generate_dict(keys, train_dialogs, lang, value_to_abstract_keys):
     :param lang:
     :return:
     '''
+    underlined_keys = []
     for key in keys:
-        lang.add_word('_'.join(key[0].split()))
-        lang.add_word('_'.join(key[1].split()))
+        key_0 = '_'.join(key[0].split())
+        key_1 = '_'.join(key[1].split())
+        lang.add_word(key_0)
+        lang.add_word(key_1)
+        underlined_keys.append((key_0,key_1))
 
     for dialog in train_dialogs:
         for dialogue in dialog['dialogue']:
@@ -151,7 +171,7 @@ def generate_dict(keys, train_dialogs, lang, value_to_abstract_keys):
     for (value, key) in value_to_abstract_keys.items():
         lang.add_word(key)
 
-    return lang
+    return lang, underlined_keys
 
 
 def normalize_key(sentence, keys):

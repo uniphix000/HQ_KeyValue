@@ -13,6 +13,7 @@ from datautils import use_cuda
 import codecs
 import os
 import subprocess
+from torch.nn.utils import clip_grad_norm
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)-15s %(levelname)s: %(message)s')
@@ -20,15 +21,19 @@ logging.basicConfig(level=logging.INFO,
 def main():
     cmd = argparse.ArgumentParser('Key-Value by H&Q')
     cmd.add_argument('--data_path', help='', default='../data/')
-    cmd.add_argument('--hidden_size', help='', type=int, default=64)
-    cmd.add_argument('--embed_size', help='', type=int, default=100)
+    cmd.add_argument('--hidden_size', help='', type=int, default=200)
+    cmd.add_argument('--embed_size', help='', type=int, default=200)
     cmd.add_argument('--batch_size', help='', type=int, default=32)
     cmd.add_argument('--lr', help='', type=float, default=0.001)
     cmd.add_argument('--lr_decay', help='', type=float, default=1.0)
     cmd.add_argument('--max_epoch', help='', type=int, default=200)
     cmd.add_argument('--seed', help='', type=int, default=1234)
-    cmd.add_argument('--dropout', help='', type=float, default=0.4)
+    cmd.add_argument('--dropout', help='', type=float, default=0.8)
     cmd.add_argument('--bleu_path', help='', default='../bleu/')
+    cmd.add_argument('--grad_clip', help='', type=float, default=10)
+    cmd.add_argument('--parallel_suffix', help='', type=str, default='')
+
+
 
 
 
@@ -44,7 +49,7 @@ def main():
 
     # 生成词典,先将key变成下划线形式加入词典,再将对话加入词典
     lang = Lang()
-    lang = generate_dict(keys, train_dialogs, lang, value_to_abstract_keys)
+    lang, underlined_keys = generate_dict(keys, train_dialogs, lang, value_to_abstract_keys)
     logging.info('dict generated! dict size:{0}'.format(lang.word_size))
 
     # 生成训练数据instances
@@ -57,7 +62,9 @@ def main():
     train_instances_idx = sentence_to_idx(lang, train_instances)  # [([],[]),()]
     valid_instances_idx = sentence_to_idx(lang, valid_instances)
     test_instances_idx = sentence_to_idx(lang, test_instances)
-    #print (train_instances_idx[:10])
+
+    # keys2idx
+    keys_idx = key_to_idx(lang, underlined_keys)
 
     train_instances_size = len(train_instances_idx)
     valid_instances_size = len(valid_instances_idx)
@@ -96,8 +103,10 @@ def main():
             encoderdecoder.train()
             encoder.zero_grad()
             decoder.zero_grad()
-            loss = encoderdecoder.forward(batch_input, batch_output, sentence_lens, encoder, decoder, lang.word2idx['pad'], args.embed_size)
+            loss = encoderdecoder.forward(batch_input, batch_output, sentence_lens, keys_idx, encoder, decoder, lang.word2idx['pad'], args.embed_size)
             loss.backward()
+            clip_grad_norm(encoder.parameters(), args.grad_clip)
+            clip_grad_norm(decoder.parameters(), args.grad_clip)
             encoder_optimizer.step()
             decoder_optimizer.step()
 
@@ -107,11 +116,11 @@ def main():
             # if (count % 100 == 0):
             #     logging.info('average loss: {0}'.format(total_loss*1.0/count))
 
-        valid_bleu_score = evaluate(encoder, decoder, encoderdecoder, valid_instances_idx, valid_instances, lang, \
-                              args.batch_size, args.embed_size, args.hidden_size, args.bleu_path)
+        valid_bleu_score = evaluate(keys_idx, encoder, decoder, encoderdecoder, valid_instances_idx, valid_instances, lang, \
+                              args.batch_size, args.embed_size, args.hidden_size, args.bleu_path, args.parallel_suffix)
         if (valid_bleu_score > best_valid_bleu_score):
-            test_bleu_score = evaluate(encoder, decoder, encoderdecoder, test_instances_idx, test_instances, lang, \
-                      args.batch_size, args.embed_size, args.hidden_size, args.bleu_path)
+            test_bleu_score = evaluate(keys_idx, encoder, decoder, encoderdecoder, test_instances_idx, test_instances, lang, \
+                      args.batch_size, args.embed_size, args.hidden_size, args.bleu_path, args.parallel_suffix)
             best_test_bleu_score = max(best_test_bleu_score, test_bleu_score)
             logging.info('New Record! test bleu score now: {0} best test bleu score ever: {1}'.format(\
                 test_bleu_score, best_test_bleu_score))
@@ -121,8 +130,8 @@ def main():
                                                                                             best_test_bleu_score))
 
 
-def evaluate(encoder, decoder, encoderdecoder, instances_idx, instances, lang, \
-                              batch_size, embed_size, hidden_size, bleu_path):
+def evaluate(keys_idx, encoder, decoder, encoderdecoder, instances_idx, instances, lang, \
+                              batch_size, embed_size, hidden_size, bleu_path, parallel_suffix):
     '''
 
     :param encoder:
@@ -152,14 +161,14 @@ def evaluate(encoder, decoder, encoderdecoder, instances_idx, instances, lang, \
         encoder.eval()
         decoder.eval()
         encoderdecoder.eval()
-        batch_predict = encoderdecoder.forward(batch_input, batch_output, sentence_lens, encoder, decoder, lang.word2idx['pad'], embed_size)
+        batch_predict = encoderdecoder.forward(batch_input, batch_output, sentence_lens, keys_idx, encoder, decoder, lang.word2idx['pad'], embed_size)
         predict_all.append(batch_predict)
         gold_all.append(batch_gold_output)
     predict_sentences, gold_sentences = transfor_idx_to_sentences(predict_all, gold_all, lang)
-    with codecs.open(os.path.join(bleu_path, 'predict.txt'), 'w', encoding='utf-8') as fp:
+    with codecs.open(os.path.join(bleu_path, ''.join(['predict', parallel_suffix])), 'w', encoding='utf-8') as fp:
         fp.write('\n\n'.join(predict_sentences))
         fp.close()
-    with codecs.open(os.path.join(bleu_path, 'gold.txt'), 'w', encoding='utf-8') as fg:
+    with codecs.open(os.path.join(bleu_path, ''.join(['gold', parallel_suffix])), 'w', encoding='utf-8') as fg:
         fg.write('\n\n'.join(gold_sentences))
         fg.close()
 
@@ -167,7 +176,6 @@ def evaluate(encoder, decoder, encoderdecoder, instances_idx, instances, lang, \
     # 原来的命令<代表重定向,相当于开了一个
     for line in p.stdout.readlines():
         return (float(line.split()[0][:-1]))
-
 
 
 def transfor_idx_to_sentences(predict_all, gold_all, lang):
@@ -197,7 +205,6 @@ def transfor_idx_to_sentences(predict_all, gold_all, lang):
             gold_sentences.append(gold_sentence)
 
     return predict_sentences, gold_sentences
-
 
 
 if __name__ == '__main__':
