@@ -56,6 +56,9 @@ def data_preprocess(path):
     valid_path = os.path.join(path, 'kvret_dev_public.json')
     test_path = os.path.join(path, 'kvret_test_public.json')
 
+    # train_path = os.path.join(path, 'test.json')
+    # valid_path = os.path.join(path, 'test.json')
+    # test_path = os.path.join(path, 'test.json')
     return preprocess(train_path), preprocess(valid_path), preprocess(test_path)
 
 
