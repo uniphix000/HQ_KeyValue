@@ -37,6 +37,8 @@ def main():
     cmd.add_argument('--parallel_suffix', help='', type=str, default='123')
     cmd.add_argument('--model_save_path', help='', type=str, default='../model')
     cmd.add_argument('--l2', help='', type=float, default=0.000005)
+    cmd.add_argument('--key_flag', help='', type=str, default='True')
+
 
 
 
@@ -89,7 +91,7 @@ def main():
                                                                           test_instances_size))
 
     encoder = Encoder(args.embed_size, args.hidden_size, args.dropout, lang)
-    decoder = AttnDecoder(args.embed_size, args.hidden_size, args.dropout, lang)
+    decoder = AttnDecoder(args.embed_size, args.hidden_size, args.dropout, lang, args.key_flag)
     encoderdecoder = EncoderDecoder(args.embed_size, args.hidden_size, args.dropout, lang)
     encoder = encoder.cuda() if use_cuda else encoder
     decoder = decoder.cuda() if use_cuda else decoder
@@ -123,7 +125,8 @@ def main():
             encoder.zero_grad()
             decoder.zero_grad()
             encoderdecoder.zero_grad()
-            loss = encoderdecoder.forward(batch_input, batch_output, sentence_lens, keys_idx, encoder, decoder, lang.word2idx['pad'], args.embed_size)
+            loss = encoderdecoder.forward(batch_input, batch_output, sentence_lens, keys_idx, \
+                                          encoder, decoder, lang.word2idx['pad'], args.embed_size)
             loss.backward()
             #print ('!!!!!!!!!!!!!!!!',decoder.parameters()['params'])
             clip_grad_norm(encoder.parameters(), args.grad_clip)
@@ -205,10 +208,10 @@ def evaluate(keys_idx, encoder, decoder, encoderdecoder, instances_idx, instance
     predict_sentences, gold_sentences = transfor_idx_to_sentences(predict_all, gold_all, lang)
 
     with codecs.open(os.path.join(bleu_path, ''.join(['predict', parallel_suffix])), 'w', encoding='utf-8') as fp:
-        fp.write('\n'.join(predict_sentences))
+        fp.write('\n\n'.join(predict_sentences))
         fp.close()
     with codecs.open(os.path.join(bleu_path, ''.join(['gold', parallel_suffix])), 'w', encoding='utf-8') as fg:
-        fg.write('\n'.join(gold_sentences))
+        fg.write('\n\n'.join(gold_sentences))
         fg.close()
 
     # 下面对预测和gold的进行f值计算,we should cal micro_f
