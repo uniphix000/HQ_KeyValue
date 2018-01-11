@@ -15,6 +15,8 @@ import os
 import subprocess
 from torch.nn.utils import clip_grad_norm
 from utils import *
+import sys
+import collections
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)-15s %(levelname)s: %(message)s')
@@ -33,13 +35,16 @@ def main():
     cmd.add_argument('--bleu_path', help='', default='../bleu/')
     cmd.add_argument('--grad_clip', help='', type=float, default=10)
     cmd.add_argument('--parallel_suffix', help='', type=str, default='123')
-    cmd.add_argument('--model_save_path', help='', type=str, default='../model/')
+    cmd.add_argument('--model_save_path', help='', type=str, default='../model')
     cmd.add_argument('--l2', help='', type=float, default=0.000005)
 
 
 
-    args = cmd.parse_args()
+    args = cmd.parse_args(sys.argv[2:])
     print (args)
+    # 存储参数配置
+    json.dump(vars(args), codecs.open(os.path.join(args.model_save_path, 'config.json'), 'w', encoding='utf-8'))
+
 
     random.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -53,6 +58,15 @@ def main():
     lang = Lang()
     lang, underlined_keys = generate_dict(keys, train_dialogs, lang, value_to_abstract_keys)
     logging.info('dict generated! dict size:{0}'.format(lang.word_size))
+
+    # 存储词典
+    with codecs.open(os.path.join(args.model_save_path, 'dict'), 'w', encoding='utf-8') as fs:
+        res_dict = []
+        for word, idx in lang.word2idx.items():
+            temp = word+'\t'+str(idx)
+            res_dict.append(temp)
+        res_dict = '\n'.join(res_dict)
+        fs.write(res_dict)
 
     # 生成训练数据instances
     train_instances = generate_instances(keys, train_dialogs, triples, value_to_abstract_keys)
@@ -136,9 +150,9 @@ def main():
         #         test_bleu_score, best_test_bleu_score))
 
         if (valid_f > best_valid_f):
-            torch.save(encoder.state_dict(), os.path.join(args.model_save_path, 'encoder.pkl'))
-            torch.save(encoder.state_dict(), os.path.join(args.model_save_path, 'decoder.pkl'))
-            torch.save(encoderdecoder.state_dict(), os.path.join(args.model_save_path, 'encoderdecoder.pkl'))
+            torch.save(encoder.state_dict(), os.path.join(args.model_save_path, 'encoder'+args.parallel_suffix))
+            torch.save(decoder.state_dict(), os.path.join(args.model_save_path, 'decoder'+args.parallel_suffix))
+            torch.save(encoderdecoder.state_dict(), os.path.join(args.model_save_path, 'encoderdecoder'+args.parallel_suffix))
             test_bleu_score, test_f = evaluate(keys_idx, encoder, decoder, encoderdecoder, test_instances_idx, test_instances, lang, \
                       args.batch_size, args.embed_size, args.hidden_size, args.bleu_path, args.parallel_suffix)
             best_test_f = max(best_test_f, test_f)
@@ -263,8 +277,73 @@ def transfor_idx_to_sentences(predict_all, gold_all, lang):
     return predict_sentences, gold_sentences
 
 
+def test():
+    cmd = argparse.ArgumentParser()
+    cmd.add_argument('--load_model_path', help='', default='../model')
+    args = cmd.parse_args(sys.argv[2:])
+    print (args)
+
+    # 初始化配置
+    args_config = dict2nametuple(json.load(codecs.open(os.path.join(args.load_model_path, 'config.json'), 'r', encoding='utf-8')))
+
+    random.seed(args_config.seed)
+    torch.manual_seed(args_config.seed)
+
+    # 数据预处理: 把标点和词分开,没有标点的统一加上.
+    train_dialogs, _, test_dialogs = data_preprocess(args_config.data_path)
+    # 提取keys, triples, entities
+    keys, triples, entities, value_to_abstract_keys = key_extraction(train_dialogs, args_config.data_path)
+
+    # 生成词典,先将key变成下划线形式加入词典,再将对话加入词典
+    lang = Lang()
+    lang, underlined_keys = generate_dict(keys, train_dialogs, lang, value_to_abstract_keys)
+    #logging.info('dict generated! dict size:{0}'.format(lang.word_size))
+
+    test_instances = generate_instances(keys, test_dialogs, triples, value_to_abstract_keys)
+    test_instances_idx = sentence_to_idx(lang, test_instances)
+    keys_idx = key_to_idx(lang, underlined_keys)
+    test_instances_size = len(test_instances_idx)
+
+    # # 初始化词典
+    # with codecs.open(os.path.join(args_config.load_model_path, 'dict'), 'r', encoding='utf-8') as fd:
+    #     lang = {}
+    #     lines = fd.read().strip().split('\n')
+    #     for line in lines:
+    #         word, idx = line.split('\t')
+    #         lang[word] = int(idx)
+    #     lang_reverse = {idx: word for idx,word in lang.items()}
+    #
+    # 初始化module
+    encoder = Encoder(args_config.embed_size, args_config.hidden_size, args_config.dropout, lang)
+    decoder = AttnDecoder(args_config.embed_size, args_config.hidden_size, args_config.dropout, lang)
+    encoderdecoder = EncoderDecoder(args_config.embed_size, args_config.hidden_size, args_config.dropout, lang)
+    encoder = encoder.cuda() if use_cuda else encoder
+    decoder = decoder.cuda() if use_cuda else decoder
+    encoderdecoder = encoderdecoder.cuda() if use_cuda else encoderdecoder
+    encoder.load_state_dict(torch.load(os.path.join(args.load_model_path, 'encoder.pkl')))
+    decoder.load_state_dict(torch.load(os.path.join(args.load_model_path, 'decoder.pkl')))
+    encoderdecoder.load_state_dict(torch.load(os.path.join(args.load_model_path, 'encoderdecoder.pkl')))
+
+    test_bleu_score, test_f = evaluate(keys_idx, encoder, decoder, encoderdecoder, test_instances_idx, test_instances, lang, \
+                      args_config.batch_size, args_config.embed_size, args_config.hidden_size, args_config.bleu_path, args_config.parallel_suffix)
+    logging.info('test bleu score: {0} test F score: {1}'.format(test_bleu_score, test_f))
+
+def dict2nametuple(dict):
+    return collections.namedtuple('Namespace', dict.keys())(**dict)
+
+
+
 if __name__ == '__main__':
-    main()
+    cmd = argparse.ArgumentParser('train or test')
+    cmd.add_argument('--function', type=str, default='train')
+    print (sys.argv)
+    args = cmd.parse_args([sys.argv[1]])
+    if (args.function == 'train'):
+        main()
+    elif (args.function == 'test'):
+        test()
+    else:
+        raise IOError
 
 
 

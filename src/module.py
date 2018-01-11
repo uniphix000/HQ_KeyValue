@@ -63,12 +63,12 @@ class AttnDecoder(nn.Module):
             nn.Linear(self.embed_size, 1)
         )
         self.softmax = nn.LogSoftmax()
-        self.ssoftmax = nn.Softmax()
+        #self.softmax = nn.Softmax()
         #self.attn_linear = nn.Linear(2*self.hidden_size, self.V)
         self.linear = nn.Linear(2*self.hidden_size, self.V)
         #self.embedding = nn.Embedding(self.V, self.embed_size)  # bug
 
-    def forward(self, input, h_c, encoder_outputs, k, attn_flag=True, key_flag=True):
+    def forward(self, input, h_c, encoder_outputs, k, attn_flag=True, key_flag=False):
         '''
 
         :param input:
@@ -77,7 +77,6 @@ class AttnDecoder(nn.Module):
         :param attn_flag:  是否使用Attention
         :return:
         '''
-
         #input = input.squeeze(1)
         h_t, c_t = self.lstmcell(input, h_c)  # input:(b_s, e_s) h_c:元组,应该变为(b_s, h_s) h_t, c_t:(b_s, h_s)
         if (attn_flag == True):
