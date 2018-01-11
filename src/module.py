@@ -10,6 +10,7 @@ from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from datautils import use_cuda
 
+
 class Encoder(nn.Module):
     def __init__(self, embed_size, hidden_size, dropout, lang):
         super(Encoder, self).__init__()

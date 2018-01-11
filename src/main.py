@@ -74,13 +74,15 @@ def main():
     train_instances = generate_instances(keys, train_dialogs, triples, value_to_abstract_keys)
     valid_instances = generate_instances(keys, valid_dialogs, triples, value_to_abstract_keys)
     test_instances = generate_instances(keys, test_dialogs, triples, value_to_abstract_keys)
+    # valid_instances = test_instances = train_instances
+
     #logging.info('instances sample: {0}'.format(train_instances))
 
     # Word2idx
     train_instances_idx = sentence_to_idx(lang, train_instances)  # [([],[]),()]
     valid_instances_idx = sentence_to_idx(lang, valid_instances)
     test_instances_idx = sentence_to_idx(lang, test_instances)
-
+    # valid_instances_idx = test_instances_idx = train_instances_idx
     # keys2idx
     keys_idx = key_to_idx(lang, underlined_keys)
 
@@ -225,8 +227,9 @@ def evaluate(keys_idx, encoder, decoder, encoderdecoder, instances_idx, instance
     #         if is_entity(word):
     #             gold_entities.add(word)
     total_f, total_num = 0., 0
+
     for index, predict_sentence in enumerate(predict_sentences):
-        model_entities, gold_entities = set(), set()
+        model_entities, gold_entities = set(), set()  #
         gold_sentence = gold_sentences[index]
         for predict_word in predict_sentence.split():
             if is_entity(predict_word):
@@ -242,7 +245,9 @@ def evaluate(keys_idx, encoder, decoder, encoderdecoder, instances_idx, instance
         total_num += 1
         total_f += cal_f(gold_entities, model_entities)
     print ('total_num:',total_num)
-    # f = cal_f(gold_entities, model_entities)
+    # print ('#gold_entities',len(gold_entities))
+    # print ('#model_entities',len(model_entities))
+    #f = cal_f(gold_entities, model_entities)
     f = total_f / total_num
     #logging.info("f = {0}".format(f))
     p = subprocess.Popen(['perl', '../bleu/multi-bleu.pl', '../bleu/gold'+str(parallel_suffix)], stdin=open('../bleu/predict' + str(parallel_suffix)), stdout=subprocess.PIPE)
@@ -323,9 +328,9 @@ def test():
     encoder = encoder.cuda() if use_cuda else encoder
     decoder = decoder.cuda() if use_cuda else decoder
     encoderdecoder = encoderdecoder.cuda() if use_cuda else encoderdecoder
-    encoder.load_state_dict(torch.load(os.path.join(args.load_model_path, 'encoder.pkl')))
-    decoder.load_state_dict(torch.load(os.path.join(args.load_model_path, 'decoder.pkl')))
-    encoderdecoder.load_state_dict(torch.load(os.path.join(args.load_model_path, 'encoderdecoder.pkl')))
+    encoder.load_state_dict(torch.load(os.path.join(args.load_model_path, 'encoder'+args_config.parallel_suffix)))
+    decoder.load_state_dict(torch.load(os.path.join(args.load_model_path, 'decoder'+args_config.parallel_suffix)))
+    encoderdecoder.load_state_dict(torch.load(os.path.join(args.load_model_path, 'encoderdecoder'+args_config.parallel_suffix)))
 
     test_bleu_score, test_f = evaluate(keys_idx, encoder, decoder, encoderdecoder, test_instances_idx, test_instances, lang, \
                       args_config.batch_size, args_config.embed_size, args_config.hidden_size, args_config.bleu_path, args_config.parallel_suffix)
