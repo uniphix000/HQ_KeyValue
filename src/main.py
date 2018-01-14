@@ -55,7 +55,7 @@ def main():
     train_dialogs, valid_dialogs, test_dialogs = data_preprocess(args.data_path)
     # 提取keys, triples, entities
     keys, triples, entities, value_to_abstract_keys = key_extraction(train_dialogs, args.data_path)
-
+    print ('len(train_dialogs)',len(train_dialogs))
     # 生成词典,先将key变成下划线形式加入词典,再将对话加入词典
     lang = Lang()
     lang, underlined_keys = generate_dict(keys, train_dialogs, lang, value_to_abstract_keys)
@@ -75,7 +75,6 @@ def main():
     valid_instances = generate_instances(keys, valid_dialogs, triples, value_to_abstract_keys)
     test_instances = generate_instances(keys, test_dialogs, triples, value_to_abstract_keys)
     # valid_instances = test_instances = train_instances
-
     #logging.info('instances sample: {0}'.format(train_instances))
 
     # Word2idx
@@ -130,7 +129,6 @@ def main():
             loss = encoderdecoder.forward(batch_input, batch_output, sentence_lens, keys_idx, \
                                           encoder, decoder, lang.word2idx['pad'], args.embed_size)
             loss.backward()
-            #print ('!!!!!!!!!!!!!!!!',decoder.parameters()['params'])
             clip_grad_norm(encoder.parameters(), args.grad_clip)
             clip_grad_norm(decoder.parameters(), args.grad_clip)
             clip_grad_norm(encoderdecoder.parameters(), args.grad_clip)
@@ -171,6 +169,7 @@ def main():
         logging.info('valid bleu score: {0} best valid bleu score ever: {1}'.format(valid_bleu_score, best_valid_bleu_score))
     logging.info('Trianing complete! best valid bleu score: {0} best test bleu score: {1} best valid F: {2} best test F: {3}'\
                  .format(best_valid_bleu_score, best_test_bleu_score, best_valid_f, best_test_f))
+    logging.info('suffix is {0}'.format(args.parallel_suffix))
 
 
 def evaluate(keys_idx, encoder, decoder, encoderdecoder, instances_idx, instances, lang, \
@@ -216,40 +215,26 @@ def evaluate(keys_idx, encoder, decoder, encoderdecoder, instances_idx, instance
         fg.write('\n\n'.join(gold_sentences))
         fg.close()
 
-    # 下面对预测和gold的进行f值计算,we should cal micro_f
-    # for entity in predict_sentences:
-    #     for word in entity.split():
-    #         if is_entity(word):
-    #             model_entities.add(word)
+    # micro-F
+    # for index, predict_sentence in enumerate(predict_sentences):
+    #     model_entities, gold_entities = set(), set()  #
+    #     gold_sentence = gold_sentences[index]
+    #     for predict_word in predict_sentence.split():
+    #         if is_entity(predict_word):
+    #             model_entities.add(predict_word)
+    #     for gold_word in gold_sentence.split():
+    #         if is_entity(gold_word):
+    #             gold_entities.add(gold_word)
+    #     if len(model_entities) == 0 and len(gold_entities) == 0:  # 防止遇到空
+    #         # total_num += 1
+    #         # total_f += 1
+    #         continue
     #
-    # for entity in gold_sentences:
-    #     for word in entity.split():
-    #         if is_entity(word):
-    #             gold_entities.add(word)
-    total_f, total_num = 0., 0
-
-    for index, predict_sentence in enumerate(predict_sentences):
-        model_entities, gold_entities = set(), set()  #
-        gold_sentence = gold_sentences[index]
-        for predict_word in predict_sentence.split():
-            if is_entity(predict_word):
-                model_entities.add(predict_word)
-        for gold_word in gold_sentence.split():
-            if is_entity(gold_word):
-                gold_entities.add(gold_word)
-        if len(model_entities) == 0 and len(gold_entities) == 0:  # 防止遇到空
-            # total_num += 1
-            # total_f += 1
-            continue
-
-        total_num += 1
-        total_f += cal_f(gold_entities, model_entities)
-    print ('total_num:',total_num)
-    # print ('#gold_entities',len(gold_entities))
-    # print ('#model_entities',len(model_entities))
-    #f = cal_f(gold_entities, model_entities)
-    f = total_f / total_num
-    #logging.info("f = {0}".format(f))
+    #     total_num += 1
+    #     total_f += cal_f(gold_entities, model_entities)
+    # print ('total_num:', total_num)
+    # f = total_f / total_num
+    f = cal_macro_F(predict_sentences, gold_sentences)
     p = subprocess.Popen(['perl', '../bleu/multi-bleu.pl', '../bleu/gold'+str(parallel_suffix)], stdin=open('../bleu/predict' + str(parallel_suffix)), stdout=subprocess.PIPE)
     # 原来的命令<代表重定向,相当于开了一个
     for line in p.stdout.readlines():

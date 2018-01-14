@@ -22,26 +22,28 @@ def preprocess(path):
     with codecs.open(path, 'r', encoding='utf-8') as fo:
         dialogs = json.loads(fo.read())
         fo.close()
-    for dialog in dialogs:
-        for dialogue in dialog['dialogue']:
-            dialogue['data']['utterance'] = dialogue['data']['utterance'] + ' '  #fixme 怎么复制并且共享操作
-            if len(dialogue['data']['utterance']) == 0:
-                continue
-            else:
-                dialogue['data']['utterance'] = dialogue['data']['utterance'].lower()
-                # if (dialogue['data']['utterance'][-1] == '.') or (dialogue['data']['utterance'][-1] == '?') or \
-                #                 (dialogue['data']['utterance'][-1] == '!') and (dialogue['data']['utterance'][-2] != ' '):
-                #     dialogue['data']['utterance'] = dialogue['data']['utterance'][:-1] + ' ' + dialogue['data']['utterance'][-1]
-                # elif (dialogue['data']['utterance'][-1] != '.') or (dialogue['data']['utterance'][-1] != '?') \
-                #         or (dialogue['data']['utterance'][-1] != '!'):
-                #     dialogue['data']['utterance'] += ' .'
-                dialogue['data']['utterance'] = dialogue['data']['utterance'].replace('. ', ' . ')
-                dialogue['data']['utterance'] = dialogue['data']['utterance'].replace('?', ' ?')
-                dialogue['data']['utterance'] = dialogue['data']['utterance'].replace('!', ' !')
-                dialogue['data']['utterance'] = dialogue['data']['utterance'].replace(',', ' ,')
 
-
-
+    for idx,dialog in enumerate(dialogs):
+        #if (1):
+        if (dialog['scenario']['task']['intent'] == 'navigate'):
+            for dialogue in dialog['dialogue']:
+                    dialogue['data']['utterance'] = dialogue['data']['utterance'] + ' '  #fixme 怎么复制并且共享操作
+                    if len(dialogue['data']['utterance']) == 0:
+                        continue
+                    else:
+                        dialogue['data']['utterance'] = dialogue['data']['utterance'].lower()
+                        # if (dialogue['data']['utterance'][-1] == '.') or (dialogue['data']['utterance'][-1] == '?') or \
+                        #                 (dialogue['data']['utterance'][-1] == '!') and (dialogue['data']['utterance'][-2] != ' '):
+                        #     dialogue['data']['utterance'] = dialogue['data']['utterance'][:-1] + ' ' + dialogue['data']['utterance'][-1]
+                        # elif (dialogue['data']['utterance'][-1] != '.') or (dialogue['data']['utterance'][-1] != '?') \
+                        #         or (dialogue['data']['utterance'][-1] != '!'):
+                        #     dialogue['data']['utterance'] += ' .'
+                        dialogue['data']['utterance'] = dialogue['data']['utterance'].replace('. ', ' . ')
+                        dialogue['data']['utterance'] = dialogue['data']['utterance'].replace('?', ' ?')
+                        dialogue['data']['utterance'] = dialogue['data']['utterance'].replace('!', ' !')
+                        dialogue['data']['utterance'] = dialogue['data']['utterance'].replace(',', ' ,')
+        else:
+            dialogs[idx] = None
     return dialogs
 
 
@@ -75,23 +77,24 @@ def key_extraction(train_dialogs, path):
         entities = json.loads(fo.read())
 
     for dialog in train_dialogs:
-        if (dialog['scenario']['kb']['items']) is not None:
-            domin = dialog['scenario']['kb']['kb_title']
-            primary_key = ''
-            if (domin == 'location information'):
-                primary_key = 'poi'
-            elif (domin == "weekly forecast"):
-                primary_key = 'location'
-            elif (domin == "calendar"):
-                primary_key = 'event'
-            for item in dialog['scenario']['kb']['items']:  # item是一个包含键值信息的dict
-                subject = item[primary_key]
-                for (relation, value) in item.items():
-                    value = value.lower()
-                    key = (subject, relation) = (subject.lower(), relation.lower())
-                    keys.add(key)
-                    triples[key][value] += 1
-                    value_to_abstract_keys[value] = "<" + '_'.join(key[0].split()) + ":" + "_".join(key[1].split()) + '>' #fixme
+        if dialog is not None:
+            if (dialog['scenario']['kb']['items']) is not None:
+                domin = dialog['scenario']['kb']['kb_title']
+                primary_key = ''
+                if (domin == 'location information'):
+                    primary_key = 'poi'
+                elif (domin == "weekly forecast"):
+                    primary_key = 'location'
+                elif (domin == "calendar"):
+                    primary_key = 'event'
+                for item in dialog['scenario']['kb']['items']:  # item是一个包含键值信息的dict
+                    subject = item[primary_key]
+                    for (relation, value) in item.items():
+                        value = value.lower()
+                        key = (subject, relation) = (subject.lower(), relation.lower())
+                        keys.add(key)
+                        triples[key][value] += 1
+                        value_to_abstract_keys[value] = "<" + '_'.join(key[0].split()) + ":" + "_".join(key[1].split()) + '>' #fixme
 
     return keys, triples, entities, value_to_abstract_keys
 
@@ -168,8 +171,9 @@ def generate_dict(keys, train_dialogs, lang, value_to_abstract_keys):
         underlined_keys.append((key_0,key_1))
 
     for dialog in train_dialogs:
-        for dialogue in dialog['dialogue']:
-            lang.add_sentence(dialogue['data']['utterance'])
+        if dialog is not None:
+            for dialogue in dialog['dialogue']:
+                lang.add_sentence(dialogue['data']['utterance'])
 
     for (value, key) in value_to_abstract_keys.items():
         lang.add_word(key)
@@ -214,20 +218,23 @@ def generate_instances(keys, train_dialogs, triples, value_to_abstract_keys):
     '''
     instances = []
     for dialog in train_dialogs:
-        flag = True
-        for dialogue in dialog['dialogue']:
-            if (dialogue['turn'] == 'assistant'):
-                output_sentence = noralize_value(normalize_key(dialogue['data']['utterance'], keys), value_to_abstract_keys)
-                instances.append((input_sentence, output_sentence))
-                input_sentence += ' '
-            elif (dialogue['turn'] == 'driver'):
-                if flag:
-                    input_sentence = ''
-                    flag = False
-                    pass
-                else:
-                    input_sentence += ' '
-            input_sentence += normalize_key(dialogue['data']['utterance'], keys)
+        if dialog is not None:
+            #if (1):
+            if (dialog['scenario']['task']['intent'] == 'navigate'):
+                flag = True
+                for dialogue in dialog['dialogue']:
+                    if (dialogue['turn'] == 'assistant'):
+                        output_sentence = noralize_value(normalize_key(dialogue['data']['utterance'], keys), value_to_abstract_keys)
+                        instances.append((input_sentence, output_sentence))
+                        input_sentence += ' '
+                    elif (dialogue['turn'] == 'driver'):
+                        if flag:
+                            input_sentence = ''
+                            flag = False
+                            pass
+                        else:
+                            input_sentence += ' '
+                    input_sentence += normalize_key(dialogue['data']['utterance'], keys)
 
     return instances
 
