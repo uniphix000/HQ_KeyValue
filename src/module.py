@@ -20,6 +20,7 @@ class Encoder(nn.Module):
         self.V = lang.word_size
         self.embedding = nn.Embedding(self.V, self.embed_size)
         self.lstm = nn.LSTM(self.embed_size, self.hidden_size, batch_first=True)
+        self.cos = nn.CosineSimilarity(dim=1)
 
     def forward(self, batch_input, sentences_lens, keys, pad_idx, batch_size, n, lst):
         '''
@@ -41,14 +42,21 @@ class Encoder(nn.Module):
         # sum
         lst_reverse = sorted(lst, key = lambda d: lst[d])
         h_last = [h_last[0][lst_reverse[i]] for i in range((n-1) * batch_size)]  # ((n-1)*b_s, 2*h_s)
-        h_last = [sum([h_last[i+j] for j in range(0, n-1)],0)  for i in range(0, (n-1)*batch_size, (n-1))]
+        h_last = [sum([h_last[i+j] for j in range(0, n-1)], 0)  for i in range(0, (n-1)*batch_size, (n-1))]
         #h_last = [h_last[i+n-2]  for i in range(0, (n-1)*batch_size, (n-1))]
         h_last = torch.cat(h_last).view(1, batch_size, -1)
         c_last = [c_last[0][lst_reverse[i]] for i in range((n-1) * batch_size)]  # ((n-1)*b_s, 2*h_s)
-        c_last = [sum([c_last[i+j] for j in range(0, n-1)],0)  for i in range(0, (n-1)*batch_size, (n-1))]
+        c_last = [sum([c_last[i+j] for j in range(0, n-1)], 0)  for i in range(0, (n-1)*batch_size, (n-1))]
         #c_last = [c_last[i+n-2]  for i in range(0, (n-1)*batch_size, (n-1))]
         c_last = torch.cat(c_last).view(1, batch_size, -1)
         return encoder_outputs, (h_last, c_last)
+
+        # Todo
+        # lst_reverse = sorted(lst, key = lambda d: lst[d])
+        # h_last = [h_last[0][lst_reverse[i]] for i in range((n-1) * batch_size)]  # ((n-1)*b_s, 2*h_s)
+        # weight = [self.cos(h_last[i+j].view(1,-1), h_last[i+n-2].view(1,-1)) \
+        #                             for j in range(0, n-2) for i in range(0, (n-1)*batch_size, (n-1))].view(n-1, -1)
+        # print (weight);exit(0)
 
 
 # class AttnDecoder(nn.Module):
@@ -181,8 +189,8 @@ class EncoderDecoder(nn.Module):
                                                                keys, pad_idx, batch_size, n, lst)  # 这里encoder_outputs是双向的
 
         # decode
-        decoder_input = Variable(torch.LongTensor([100]*batch_size).view(batch_size)).cuda() if use_cuda else \
-            Variable(torch.LongTensor([100]*batch_size).view(batch_size))
+        decoder_input = Variable(torch.LongTensor([0]*batch_size).view(batch_size)).cuda() if use_cuda else \
+            Variable(torch.LongTensor([0]*batch_size).view(batch_size))
         h_c = (h_last[0], c_last[0])  # 降维
         loss = 0
         predict_box = []

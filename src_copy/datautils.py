@@ -24,8 +24,8 @@ def preprocess(path):
         fo.close()
 
     for idx,dialog in enumerate(dialogs):
-        #if (1):
-        if (dialog['scenario']['task']['intent'] == 'schedule'):
+        if (1):
+        # if (dialog['scenario']['task']['intent'] == 'schedule'):
             for dialogue in dialog['dialogue']:
                     dialogue['data']['utterance'] = dialogue['data']['utterance'] + ' '  #fixme 怎么复制并且共享操作
                     if len(dialogue['data']['utterance']) == 0:
@@ -219,8 +219,8 @@ def generate_instances(keys, train_dialogs, triples, value_to_abstract_keys):
     instances = []
     for dialog in train_dialogs:
         if dialog is not None:
-            #if (1):
-            if (dialog['scenario']['task']['intent'] == 'schedule'):
+            if (1):
+            #if (dialog['scenario']['task']['intent'] == 'schedule'):
                 flag = True
                 for dialogue in dialog['dialogue']:
                     if (dialogue['turn'] == 'assistant'):

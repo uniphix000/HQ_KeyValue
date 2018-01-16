@@ -266,17 +266,19 @@ def sentence_to_idx(lang, instances):
     return idx_instances
 
 
-def sort_instances(instances):
+def sort_instances(instances_idx, instances):
     '''
         根据轮次个数打包instance，轮次个数相同的将被放在一起
-    :param instances:
+    :param instances_idx:
     :return:
     '''
-    instances_dict = {2*i: [] for i in range(10)}
-    for instance in instances:
-        if (len(instance) % 2 == 0) :#& (len(instance) > 3):
-            instances_dict[len(instance)].append(instance)
-    return instances_dict
+    instances_idx_dict = {2*i: [] for i in range(10)}
+    instances_answer_dict = {2*i: [] for i in range(10)}
+    for instance_idx, instance in zip(instances_idx,instances):
+        if (len(instance_idx) % 2 == 0): # & (len(instance_idx) > 3):
+            instances_idx_dict[len(instance_idx)].append(instance_idx)
+            instances_answer_dict[len(instance_idx)].append(instance[-1])
+    return instances_idx_dict, instances_answer_dict
 
 
 
@@ -299,8 +301,8 @@ def generate_batch(instances, batch_gold, batch_size, pad_idx):
     #     batch_gold_output.append(gold_output[-1])
     lst = range((n-1) * batch_size)
     lst = sorted(lst, key = lambda d: -len(batch_input[d]))
-    #lst_reverse = sorted(lst, key = lambda d: lst[d])
     batch_input = [batch_input[ids] for ids in lst]
+    #lst_reverse = sorted(lst, key = lambda d: lst[d])
     #batch_output = [batch_output[ids] for ids in lst]
     #batch_gold_output = [batch_gold_output[ids] for ids in lst]
 

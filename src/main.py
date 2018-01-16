@@ -94,9 +94,9 @@ def main():
                                                                           test_instances_size))
 
     # 根据轮次个数打包instance，轮次个数相同的将被放在一起
-    sorted_train_instances_idx = sort_instances(train_instances_idx)
-    sorted_valid_instances_idx = sort_instances(valid_instances_idx)
-    sorted_test_instances_idx = sort_instances(test_instances_idx)
+    sorted_train_instances_idx, sorted_train_answer_dict = sort_instances(train_instances_idx, train_instances)
+    sorted_valid_instances_idx, sorted_valid_answer_dict = sort_instances(valid_instances_idx, valid_instances)
+    sorted_test_instances_idx, sorted_test_answer_dict = sort_instances(test_instances_idx, test_instances)
 
     sorted_train_instances_size = sum([len(value) for key,value in sorted_train_instances_idx.items()])
     sorted_valid_instances_size = sum([len(value) for key,value in sorted_valid_instances_idx.items()])
@@ -138,7 +138,7 @@ def main():
                 end_id = start_id + args.batch_size if start_id + args.batch_size < instances_size else instances_size
                 batch_size = end_id - start_id
                 batch_to_be_generated = [sorted_train_instances_idx[j][ids] for ids in order[start_id:end_id]]  # [[[],],]
-                #batch_gold = [train_instances[ids] for ids in order[start_id:end_id]]  # 对于train来说没有用 # TODO
+                #batch_gold = [sorted_train_answer_dict[j][ids] for ids in order[start_id:end_id]]  # 对于train来说没有用 # TODO
                 batch_gold = []
                 batch_input, batch_output, _, sentence_lens, n, lst= generate_batch(batch_to_be_generated, batch_gold, batch_size, lang.word2idx['pad'])
 
@@ -165,14 +165,14 @@ def main():
                 # if (count % 100 == 0):
                 #     logging.info('average loss: {0}'.format(total_loss*1.0/count))
 
-        valid_bleu_score, valid_f = evaluate(keys_idx, encoder, decoder, encoderdecoder, sorted_train_instances_idx, train_instances, lang, \
+        valid_bleu_score, valid_f = evaluate(keys_idx, encoder, decoder, encoderdecoder, sorted_valid_instances_idx, sorted_valid_answer_dict, lang, \
                               args.batch_size, args.embed_size, args.hidden_size, args.bleu_path, args.parallel_suffix)
 
         if (valid_f > best_valid_f):
             torch.save(encoder.state_dict(), os.path.join(args.model_save_path, 'encoder'+args.parallel_suffix))
             torch.save(decoder.state_dict(), os.path.join(args.model_save_path, 'decoder'+args.parallel_suffix))
             torch.save(encoderdecoder.state_dict(), os.path.join(args.model_save_path, 'encoderdecoder'+args.parallel_suffix))
-            test_bleu_score, test_f = evaluate(keys_idx, encoder, decoder, encoderdecoder, sorted_test_instances_idx, test_instances, lang, \
+            test_bleu_score, test_f = evaluate(keys_idx, encoder, decoder, encoderdecoder, sorted_test_instances_idx, sorted_test_answer_dict, lang, \
                       args.batch_size, args.embed_size, args.hidden_size, args.bleu_path, args.parallel_suffix)
             best_test_f = max(best_test_f, test_f)
             best_test_bleu_score = max(best_test_bleu_score, test_bleu_score)
@@ -188,7 +188,7 @@ def main():
     logging.info('suffix is {0}'.format(args.parallel_suffix))
 
 
-def evaluate(keys_idx, encoder, decoder, encoderdecoder, instances_idx, instances, lang, \
+def evaluate(keys_idx, encoder, decoder, encoderdecoder, instances_idx, instances_answer, lang, \
                               batch_size, embed_size, hidden_size, bleu_path, parallel_suffix):
     '''
 
@@ -221,7 +221,7 @@ def evaluate(keys_idx, encoder, decoder, encoderdecoder, instances_idx, instance
             end_id = start_id + batch_size if start_id + batch_size < instances_size else instances_size
             batch_size = end_id - start_id
             batch_to_be_generated = [instances_idx[j][ids] for ids in order[start_id:end_id]]  # [[[],],]
-            batch_gold = [instances[ids] for ids in order[start_id:end_id]]  # 对于train来说没有用 # TODO
+            batch_gold = [instances_answer[j][ids] for ids in order[start_id:end_id]]  #
             batch_input, batch_output, _, sentence_lens, n, lst= generate_batch(batch_to_be_generated, batch_gold, batch_size, lang.word2idx['pad'])
 
             # eval
@@ -234,6 +234,7 @@ def evaluate(keys_idx, encoder, decoder, encoderdecoder, instances_idx, instance
             gold_all.append(batch_gold)
     predict_sentences, gold_sentences = transfor_idx_to_sentences(predict_all, gold_all, lang)  # fixme 这里有问题
     print (predict_sentences)
+    #print (gold_sentences)
 
     with codecs.open(os.path.join(bleu_path, ''.join(['predict', parallel_suffix])), 'w', encoding='utf-8') as fp:
         fp.write('\n\n'.join(predict_sentences))
@@ -292,7 +293,7 @@ def transfor_idx_to_sentences(predict_all, gold_all, lang):
             predict_sentences.append(sentence)
     for gold_batch in gold_all:
         for gold_sentence in gold_batch:
-            gold_sentences.append(gold_sentence[-1])
+            gold_sentences.append(gold_sentence)
 
     return predict_sentences, gold_sentences
 
