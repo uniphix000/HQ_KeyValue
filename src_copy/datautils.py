@@ -13,7 +13,7 @@ import torch
 use_cuda = torch.cuda.is_available()
 oov = 1
 
-def preprocess(path, domin):
+def preprocess(path):
     '''
 
     :param dialog:
@@ -24,27 +24,10 @@ def preprocess(path, domin):
         fo.close()
 
     for idx,dialog in enumerate(dialogs):
-        if (domin == 'all'):
+        #if (1):
+        if (dialog['scenario']['task']['intent'] == 'schedule'):
             for dialogue in dialog['dialogue']:
-                dialogue['data']['utterance'] = dialogue['data']['utterance'] + ' '  # fixme 怎么复制并且共享操作
-                if len(dialogue['data']['utterance']) == 0:
-                    continue
-                else:
-                    dialogue['data']['utterance'] = dialogue['data']['utterance'].lower()
-                    # if (dialogue['data']['utterance'][-1] == '.') or (dialogue['data']['utterance'][-1] == '?') or \
-                    #                 (dialogue['data']['utterance'][-1] == '!') and (dialogue['data']['utterance'][-2] != ' '):
-                    #     dialogue['data']['utterance'] = dialogue['data']['utterance'][:-1] + ' ' + dialogue['data']['utterance'][-1]
-                    # elif (dialogue['data']['utterance'][-1] != '.') or (dialogue['data']['utterance'][-1] != '?') \
-                    #         or (dialogue['data']['utterance'][-1] != '!'):
-                    #     dialogue['data']['utterance'] += ' .'
-                    dialogue['data']['utterance'] = dialogue['data']['utterance'].replace('. ', ' . ')
-                    dialogue['data']['utterance'] = dialogue['data']['utterance'].replace('?', ' ?')
-                    dialogue['data']['utterance'] = dialogue['data']['utterance'].replace('!', ' !')
-                    dialogue['data']['utterance'] = dialogue['data']['utterance'].replace(',', ' ,')
-        elif (domin == 'navigate'):
-            if (dialog['scenario']['task']['intent'] == 'navigate'):
-                for dialogue in dialog['dialogue']:
-                    dialogue['data']['utterance'] = dialogue['data']['utterance'] + ' '  # fixme 怎么复制并且共享操作
+                    dialogue['data']['utterance'] = dialogue['data']['utterance'] + ' '  #fixme 怎么复制并且共享操作
                     if len(dialogue['data']['utterance']) == 0:
                         continue
                     else:
@@ -59,12 +42,12 @@ def preprocess(path, domin):
                         dialogue['data']['utterance'] = dialogue['data']['utterance'].replace('?', ' ?')
                         dialogue['data']['utterance'] = dialogue['data']['utterance'].replace('!', ' !')
                         dialogue['data']['utterance'] = dialogue['data']['utterance'].replace(',', ' ,')
-            else:
-                dialogs[idx] = None
+        else:
+            dialogs[idx] = None
     return dialogs
 
 
-def data_preprocess(path, domin):
+def data_preprocess(path):
     '''
     数据预处理: 把标点和词分开,没有标点的统一加上.
     :param path:
@@ -78,7 +61,7 @@ def data_preprocess(path, domin):
     # train_path = os.path.join(path, 'test.json')
     # valid_path = os.path.join(path, 'test.json')
     # test_path = os.path.join(path, 'test.json')
-    return preprocess(train_path, domin), preprocess(valid_path, domin), preprocess(test_path, domin)
+    return preprocess(train_path), preprocess(valid_path), preprocess(test_path)
 
 
 def key_extraction(train_dialogs, path):
@@ -226,7 +209,7 @@ def noralize_value(sentence, value_to_abstract_keys):
 
 def generate_instances(keys, train_dialogs, triples, value_to_abstract_keys):
     '''
-    生成形如[u1, s1, u2, s2]的数据, 这里还要考虑一组多轮对话是否要拆分为多个过程
+    生成形如[(u1 s1 u2, s2),...]的数据
     :param keys:
     :param train_dialogs:
     :param triples:
@@ -236,15 +219,23 @@ def generate_instances(keys, train_dialogs, triples, value_to_abstract_keys):
     instances = []
     for dialog in train_dialogs:
         if dialog is not None:
-            instances_tmp = []
-            for dialogue in dialog['dialogue']:
-                if (dialogue['turn'] == 'assistant'):
-                    output_sentence = noralize_value(normalize_key(dialogue['data']['utterance'], keys), value_to_abstract_keys)
-                    instances_tmp.append(output_sentence)
-                    instances.append(copy.deepcopy(instances_tmp))
-                elif (dialogue['turn'] == 'driver'):
-                    input_sentence = normalize_key(dialogue['data']['utterance'], keys)
-                    instances_tmp.append(input_sentence)
+            #if (1):
+            if (dialog['scenario']['task']['intent'] == 'schedule'):
+                flag = True
+                for dialogue in dialog['dialogue']:
+                    if (dialogue['turn'] == 'assistant'):
+                        output_sentence = noralize_value(normalize_key(dialogue['data']['utterance'], keys), value_to_abstract_keys)
+                        instances.append((input_sentence, output_sentence))
+                        input_sentence += ' '
+                    elif (dialogue['turn'] == 'driver'):
+                        if flag:
+                            input_sentence = ''
+                            flag = False
+                            pass
+                        else:
+                            input_sentence += ' '
+                    input_sentence += normalize_key(dialogue['data']['utterance'], keys)
+
     return instances
 
 
@@ -252,70 +243,49 @@ def sentence_to_idx(lang, instances):
     '''
 
     :param lang:
-    :param train_instances: [[,],]  内层每个list包含了n轮对话的句子
-    :return: [[[,],],]  内1层每个list是n轮对话句子，内2层是每句话的idx表示
+    :param train_instances: [(),()]
+    :return: [([],[]),()]
     '''
     idx_instances = []
     for instance in instances:
-        idx_instance = []
-        for sentence in instance:
-            sentence = [lang.word2idx['<BOS>']]+ lang.sentence_to_idx(sentence)
-            idx_instance.append(sentence)
-        idx_instance[-1] = idx_instance[-1] + [lang.word2idx['<EOS>']]
-        idx_instances.append(idx_instance)
+        instance_0 = [lang.word2idx['<BOS>']]+ lang.sentence_to_idx(instance[0])
+        instance_1 = [lang.word2idx['<BOS>']]+ lang.sentence_to_idx(instance[1]) + [lang.word2idx['<EOS>']]
+        idx_instances.append((instance_0, instance_1))
     return idx_instances
-
-
-def sort_instances(instances):
-    '''
-        根据轮次个数打包instance，轮次个数相同的将被放在一起
-    :param instances:
-    :return:
-    '''
-    instances_dict = {2*i: [] for i in range(10)}
-    for instance in instances:
-        if (len(instance) % 2 == 0) :#& (len(instance) > 3):
-            instances_dict[len(instance)].append(instance)
-    return instances_dict
-
 
 
 def generate_batch(instances, batch_gold, batch_size, pad_idx):
     '''
-        这里需要输出可以送入lstm的(n * b_s, m_l, h_s)
-        进行padding
-        抽取出output
-    :param batch_to_be_generated: [[[,],],] 这里轮次已经被统一
-    :return:
+
+    :param instances: [([],[]),]
+    :param batch_gold:
+    :param pad_idx:
+    :return: [[],] (batch_size, max_length)
     '''
-    n = len(instances[0])
     batch_input = []
     batch_output = []
-    for instance in instances:
-        batch_input += instance[:-1]
-        batch_output.append(instance[-1])
+    for (input, output) in instances:
+        batch_input.append(input)
+        batch_output.append(output)
     batch_gold_output = []
-    # for gold_output in batch_gold:
-    #     batch_gold_output.append(gold_output[-1])
-    lst = range((n-1) * batch_size)
+    for (_, gold_output) in batch_gold:
+        batch_gold_output.append(gold_output)
+    lst = range(batch_size)
     lst = sorted(lst, key = lambda d: -len(batch_input[d]))
-    #lst_reverse = sorted(lst, key = lambda d: lst[d])
     batch_input = [batch_input[ids] for ids in lst]
-    #batch_output = [batch_output[ids] for ids in lst]
-    #batch_gold_output = [batch_gold_output[ids] for ids in lst]
+    batch_output = [batch_output[ids] for ids in lst]
+    batch_gold_output = [batch_gold_output[ids] for ids in lst]
 
-    input_max_length = max([len(batch_input[i]) for i in range((n-1) * batch_size)])
+    input_max_length = len(batch_input[0])
     output_max_length = max([len(batch_output[i]) for i in range(batch_size)])
 
-    sentence_lens = [len(batch_input[i]) for i in range((n-1) * batch_size)]
-
-    batch_input = [batch_input[i] + [pad_idx] * (input_max_length - len(batch_input[i])) for i in range((n-1) * batch_size)]
+    batch_input = [batch_input[i] + [pad_idx] * (input_max_length - len(batch_input[i])) for i in range(batch_size)]
     batch_output = [batch_output[i] + [pad_idx] * (output_max_length - len(batch_output[i])) for i in range(batch_size)]
 
     batch_input = Variable(torch.LongTensor(batch_input)).cuda() if use_cuda else Variable(torch.LongTensor(batch_input))
     batch_output = Variable(torch.LongTensor(batch_output)).cuda() if use_cuda else Variable(torch.LongTensor(batch_output))
-
-    return batch_input, batch_output, batch_gold_output, sentence_lens, n, lst
+    sentence_lens = [len(batch_input[i]) for i in range(batch_size)]
+    return batch_input, batch_output, batch_gold_output, sentence_lens
 
 
 

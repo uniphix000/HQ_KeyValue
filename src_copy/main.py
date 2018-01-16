@@ -38,9 +38,6 @@ def main():
     cmd.add_argument('--model_save_path', help='', type=str, default='../model')
     cmd.add_argument('--l2', help='', type=float, default=0.000005)
     cmd.add_argument('--key_flag', help='', type=str, default='True')
-    cmd.add_argument('--domin', help='', type=str, default='all')
-
-
 
 
 
@@ -55,7 +52,7 @@ def main():
     torch.manual_seed(args.seed)
 
     # 数据预处理: 把标点和词分开,没有标点的统一加上.
-    train_dialogs, valid_dialogs, test_dialogs = data_preprocess(args.data_path, args.domin)
+    train_dialogs, valid_dialogs, test_dialogs = data_preprocess(args.data_path)
     # 提取keys, triples, entities
     keys, triples, entities, value_to_abstract_keys = key_extraction(train_dialogs, args.data_path)
     # 生成词典,先将key变成下划线形式加入词典,再将对话加入词典
@@ -80,7 +77,7 @@ def main():
     #logging.info('instances sample: {0}'.format(train_instances))
 
     # Word2idx
-    train_instances_idx = sentence_to_idx(lang, train_instances)  # [[[,],],]
+    train_instances_idx = sentence_to_idx(lang, train_instances)  # [([],[]),()]
     valid_instances_idx = sentence_to_idx(lang, valid_instances)
     test_instances_idx = sentence_to_idx(lang, test_instances)
     # valid_instances_idx = test_instances_idx = train_instances_idx
@@ -93,21 +90,8 @@ def main():
     logging.info('trainging size:{0} valid size:{1} test size:{2}'.format(train_instances_size, valid_instances_size, \
                                                                           test_instances_size))
 
-    # 根据轮次个数打包instance，轮次个数相同的将被放在一起
-    sorted_train_instances_idx = sort_instances(train_instances_idx)
-    sorted_valid_instances_idx = sort_instances(valid_instances_idx)
-    sorted_test_instances_idx = sort_instances(test_instances_idx)
-
-    sorted_train_instances_size = sum([len(value) for key,value in sorted_train_instances_idx.items()])
-    sorted_valid_instances_size = sum([len(value) for key,value in sorted_valid_instances_idx.items()])
-    sorted_test_instances_size = sum([len(value) for key,value in sorted_test_instances_idx.items()])
-
-
-    logging.info('trainging size:{0} valid size:{1} test size:{2}'.format(sorted_train_instances_size, \
-                                            sorted_valid_instances_size, sorted_test_instances_size))
-
     encoder = Encoder(args.embed_size, args.hidden_size, args.dropout, lang)
-    decoder = SumDecoder(args.embed_size, args.hidden_size, args.dropout, lang, args.key_flag)
+    decoder = AttnDecoder(args.embed_size, args.hidden_size, args.dropout, lang, args.key_flag)
     encoderdecoder = EncoderDecoder(args.embed_size, args.hidden_size, args.dropout, lang)
     encoder = encoder.cuda() if use_cuda else encoder
     decoder = decoder.cuda() if use_cuda else decoder
@@ -116,63 +100,62 @@ def main():
     decoder_optimizer = optim.Adam(decoder.parameters(), lr=args.lr, weight_decay=args.l2)
     encoderdecoder_optimizer = optim.Adam(decoder.parameters(), lr=args.lr, weight_decay=args.l2)
 
+
     # train
     best_valid_bleu_score, best_test_bleu_score = 0, 0
     best_valid_f, best_test_f = 0, 0
+    order = list(range(len(train_instances_idx)))
     for i in range(args.max_epoch):
         logging.info('--------------------Round {0}---------------------'.format(i))
-        max_utterance_num = 0
-        for key,value in sorted_train_instances_idx.items():
-            if value is not []:
-                max_utterance_num = max(key, max_utterance_num)
-        for j in range(2, max_utterance_num + 2, 2):
-            instances_size = len(sorted_train_instances_idx[j])
-            order = list(range(instances_size))
-            #random.shuffle(order)
-            start_id = 0
-            count = 0
-            total_loss = 0
+        #random.shuffle(order)
+        start_id = 0
+        count = 0
+        total_loss = 0
+        for start_id in range(0, train_instances_size, args.batch_size):
+            end_id = start_id + args.batch_size if start_id + args.batch_size < train_instances_size else train_instances_size
+            batch_size = end_id - start_id
+            batch_to_be_generated = [train_instances_idx[ids] for ids in order[start_id:end_id]]
+            batch_gold = [train_instances[ids] for ids in order[start_id:end_id]]  # 对于train来说没有用
+            batch_input, batch_output, _, sentence_lens = generate_batch(batch_to_be_generated, batch_gold, batch_size, lang.word2idx['pad'])
 
             # train
-            for start_id in range(0, instances_size, args.batch_size):
-                end_id = start_id + args.batch_size if start_id + args.batch_size < instances_size else instances_size
-                batch_size = end_id - start_id
-                batch_to_be_generated = [sorted_train_instances_idx[j][ids] for ids in order[start_id:end_id]]  # [[[],],]
-                #batch_gold = [train_instances[ids] for ids in order[start_id:end_id]]  # 对于train来说没有用 # TODO
-                batch_gold = []
-                batch_input, batch_output, _, sentence_lens, n, lst= generate_batch(batch_to_be_generated, batch_gold, batch_size, lang.word2idx['pad'])
+            encoder.train()
+            decoder.train()
+            encoderdecoder.train()
+            encoder.zero_grad()
+            decoder.zero_grad()
+            encoderdecoder.zero_grad()
+            loss = encoderdecoder.forward(batch_input, batch_output, sentence_lens, keys_idx, \
+                                          encoder, decoder, lang.word2idx['pad'], args.embed_size)
+            loss.backward()
+            clip_grad_norm(encoder.parameters(), args.grad_clip)
+            clip_grad_norm(decoder.parameters(), args.grad_clip)
+            clip_grad_norm(encoderdecoder.parameters(), args.grad_clip)
+            encoder_optimizer.step()
+            decoder_optimizer.step()
+            encoderdecoder_optimizer.step()
 
-                # train
-                encoder.train()
-                decoder.train()
-                encoderdecoder.train()
-                encoder.zero_grad()
-                decoder.zero_grad()
-                encoderdecoder.zero_grad()
-                loss = encoderdecoder.forward(batch_input, batch_output, sentence_lens, keys_idx, \
-                                              encoder, decoder, lang.word2idx['pad'], args.embed_size, batch_size, n, lst)
-                loss.backward()
-                clip_grad_norm(encoder.parameters(), args.grad_clip)
-                clip_grad_norm(decoder.parameters(), args.grad_clip)
-                clip_grad_norm(encoderdecoder.parameters(), args.grad_clip)
-                encoder_optimizer.step()
-                decoder_optimizer.step()
-                encoderdecoder_optimizer.step()
+            total_loss += loss.data
+            count += 1
 
-                total_loss += loss.data
-                count += 1
+            # if (count % 100 == 0):
+            #     logging.info('average loss: {0}'.format(total_loss*1.0/count))
 
-                # if (count % 100 == 0):
-                #     logging.info('average loss: {0}'.format(total_loss*1.0/count))
-
-        valid_bleu_score, valid_f = evaluate(keys_idx, encoder, decoder, encoderdecoder, sorted_train_instances_idx, train_instances, lang, \
+        valid_bleu_score, valid_f = evaluate(keys_idx, encoder, decoder, encoderdecoder, valid_instances_idx, valid_instances, lang, \
                               args.batch_size, args.embed_size, args.hidden_size, args.bleu_path, args.parallel_suffix)
+        # if (valid_bleu_score > best_valid_bleu_score):
+        #     test_bleu_score, test_f = evaluate(keys_idx, encoder, decoder, encoderdecoder, test_instances_idx, test_instances, lang, \
+        #               args.batch_size, args.embed_size, args.hidden_size, args.bleu_path, args.parallel_suffix)
+        #     best_test_bleu_score = max(best_test_bleu_score, test_bleu_score)
+        #
+        #     logging.info('New Record! test bleu score now: {0} best test bleu score ever: {1}'.format(\
+        #         test_bleu_score, best_test_bleu_score))
 
         if (valid_f > best_valid_f):
             torch.save(encoder.state_dict(), os.path.join(args.model_save_path, 'encoder'+args.parallel_suffix))
             torch.save(decoder.state_dict(), os.path.join(args.model_save_path, 'decoder'+args.parallel_suffix))
             torch.save(encoderdecoder.state_dict(), os.path.join(args.model_save_path, 'encoderdecoder'+args.parallel_suffix))
-            test_bleu_score, test_f = evaluate(keys_idx, encoder, decoder, encoderdecoder, sorted_test_instances_idx, test_instances, lang, \
+            test_bleu_score, test_f = evaluate(keys_idx, encoder, decoder, encoderdecoder, test_instances_idx, test_instances, lang, \
                       args.batch_size, args.embed_size, args.hidden_size, args.bleu_path, args.parallel_suffix)
             best_test_f = max(best_test_f, test_f)
             best_test_bleu_score = max(best_test_bleu_score, test_bleu_score)
@@ -202,37 +185,27 @@ def evaluate(keys_idx, encoder, decoder, encoderdecoder, instances_idx, instance
     :param hidden_size:
     :return:
     '''
-
-    max_utterance_num = 0
+    order = list(range(len(instances_idx)))
+    instances_size = len(instances_idx)
+    #random.shuffle(order)
+    start_id = 0
     predict_all = []
     gold_all = []
-    for key,value in instances_idx.items():
-        if value is not []:
-            max_utterance_num = max(key, max_utterance_num)
-    for j in range(2, max_utterance_num + 2, 2):
-        instances_size = len(instances_idx[j])
-        order = list(range(instances_size))
-        #random.shuffle(order)
-        start_id = 0
-        count = 0
-        total_loss = 0
-        #
-        for start_id in range(0, instances_size, batch_size):
-            end_id = start_id + batch_size if start_id + batch_size < instances_size else instances_size
-            batch_size = end_id - start_id
-            batch_to_be_generated = [instances_idx[j][ids] for ids in order[start_id:end_id]]  # [[[],],]
-            batch_gold = [instances[ids] for ids in order[start_id:end_id]]  # 对于train来说没有用 # TODO
-            batch_input, batch_output, _, sentence_lens, n, lst= generate_batch(batch_to_be_generated, batch_gold, batch_size, lang.word2idx['pad'])
+    for start_id in range(0, instances_size, batch_size):
+        end_id = start_id + batch_size if start_id + batch_size < instances_size else instances_size
+        batch_size = end_id - start_id
+        batch_to_be_generated = [instances_idx[ids] for ids in order[start_id:end_id]]
+        batch_gold = [instances[ids] for ids in order[start_id:end_id]]  # 为了跳过idx的转化
+        batch_input, batch_output, batch_gold_output, sentence_lens = generate_batch(batch_to_be_generated, batch_gold, batch_size, lang.word2idx['pad'])
 
-            # eval
-            encoder.eval()
-            decoder.eval()
-            encoderdecoder.eval()
-            batch_predict = encoderdecoder.forward(batch_input, batch_output, sentence_lens, keys_idx, \
-                                                  encoder, decoder, lang.word2idx['pad'], embed_size, batch_size, n, lst)
-            predict_all.append(batch_predict)
-            gold_all.append(batch_gold)
-    predict_sentences, gold_sentences = transfor_idx_to_sentences(predict_all, gold_all, lang)  # fixme 这里有问题
+        # eval
+        encoder.eval()
+        decoder.eval()
+        encoderdecoder.eval()
+        batch_predict = encoderdecoder.forward(batch_input, batch_output, sentence_lens, keys_idx, encoder, decoder, lang.word2idx['pad'], embed_size)
+        predict_all.append(batch_predict)
+        gold_all.append(batch_gold_output)
+    predict_sentences, gold_sentences = transfor_idx_to_sentences(predict_all, gold_all, lang)
     print (predict_sentences)
 
     with codecs.open(os.path.join(bleu_path, ''.join(['predict', parallel_suffix])), 'w', encoding='utf-8') as fp:
@@ -292,7 +265,7 @@ def transfor_idx_to_sentences(predict_all, gold_all, lang):
             predict_sentences.append(sentence)
     for gold_batch in gold_all:
         for gold_sentence in gold_batch:
-            gold_sentences.append(gold_sentence[-1])
+            gold_sentences.append(gold_sentence)
 
     return predict_sentences, gold_sentences
 
