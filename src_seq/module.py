@@ -20,6 +20,8 @@ class Encoder(nn.Module):
         self.V = lang.word_size
         self.embedding = nn.Embedding(self.V, self.embed_size)
         self.lstm = nn.LSTM(self.embed_size, self.hidden_size, batch_first=True)
+        self.seq_lstm_h = nn.LSTM(self.hidden_size, self.hidden_size, batch_first=True)
+        self.seq_lstm_c = nn.LSTM(self.hidden_size, self.hidden_size, batch_first=True)
         self.cos = nn.CosineSimilarity(dim=1)
 
     def forward(self, batch_input, sentences_lens, keys, pad_idx, batch_size, n, lst):
@@ -39,16 +41,18 @@ class Encoder(nn.Module):
         encoder_outputs_packed, (h_last, c_last) = self.lstm(batch_input_packed)  # h_last: (1，(n-1)*b_s, h_s)
         encoder_outputs, _ = pad_packed_sequence(encoder_outputs_packed, batch_first=True)  # fixme 怎么指定pad_idx
 
-        # sum
+        # seq
         lst_reverse = sorted(lst, key = lambda d: lst[d])
         h_last = [h_last[0][lst_reverse[i]] for i in range((n-1) * batch_size)]  # ((n-1)*b_s, h_s)
-        h_last = [sum([h_last[i+j] for j in range(0, n-1)], 0)  for i in range(0, (n-1)*batch_size, (n-1))]
-        #h_last = [h_last[i+n-2]  for i in range(0, (n-1)*batch_size, (n-1))]
-        h_last = torch.cat(h_last).view(1, batch_size, -1)
+        #h_last = [sum([h_last[i+j] for j in range(0, n-1)], 0)  for i in range(0, (n-1)*batch_size, (n-1))]
+        h_input = torch.cat(h_last).view(batch_size, n-1, -1)
+        _, (h_last, _) = self.seq_lstm_h(h_input)  # (b_s, h_s)
+        h_last = h_last.contiguous().view(1, batch_size, -1)
         c_last = [c_last[0][lst_reverse[i]] for i in range((n-1) * batch_size)]  # ((n-1)*b_s, h_s)
-        c_last = [sum([c_last[i+j] for j in range(0, n-1)], 0)  for i in range(0, (n-1)*batch_size, (n-1))]
-        #c_last = [c_last[i+n-2]  for i in range(0, (n-1)*batch_size, (n-1))]
-        c_last = torch.cat(c_last).view(1, batch_size, -1)
+        #c_last = [sum([c_last[i+j] for j in range(0, n-1)], 0)  for i in range(0, (n-1)*batch_size, (n-1))]
+        c_input = torch.cat(c_last).view(batch_size, n-1, -1)
+        _, (c_last, _) = self.seq_lstm_c(c_input)  # (b_s, h_s)
+        c_last = c_last.contiguous().view(1, batch_size, -1)
         return encoder_outputs, (h_last, c_last)
 
 

@@ -8,7 +8,8 @@ import torch.nn.functional as F
 from torch import optim
 from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
-from datautils import use_cuda
+from datautils import use_cuda, flatten
+
 
 
 class Encoder(nn.Module):
@@ -20,7 +21,10 @@ class Encoder(nn.Module):
         self.V = lang.word_size
         self.embedding = nn.Embedding(self.V, self.embed_size)
         self.lstm = nn.LSTM(self.embed_size, self.hidden_size, batch_first=True)
-        self.cos = nn.CosineSimilarity(dim=1)
+        self.seq_lstm_h = nn.LSTM(self.hidden_size, self.hidden_size, batch_first=True)
+        self.seq_lstm_c = nn.LSTM(self.hidden_size, self.hidden_size, batch_first=True)
+        self.cos = nn.CosineSimilarity(dim=0)
+        self.softmax = nn.Softmax()
 
     def forward(self, batch_input, sentences_lens, keys, pad_idx, batch_size, n, lst):
         '''
@@ -33,21 +37,36 @@ class Encoder(nn.Module):
         # embed_key = self.embedding(keys.squeeze(2))
         # k = torch.sum(embed_key, 1)  # (kv, embed_size)
 
+        lst_reverse = sorted(lst, key = lambda d: lst[d])
+
+        # 计算weight
         embed = self.embedding(batch_input)  # ((n-1)*b_s, m_l, e_s)
+        sentence_embed = torch.sum(embed, 1)  # ((n-1)*b_s, e_s)  # fixme 怎么排除pad的影响
+        sentence_embed = [sentence_embed[lst_reverse[i]] for i in range((n-1) * batch_size)]
+        cos_value = torch.cat(flatten([[self.cos(sentence_embed[i+j], sentence_embed[i+n-2]) for j in range(0, n-1)] \
+                     for i in range(0, (n-1)*batch_size, (n-1))])).view(batch_size, -1)  #
+        weight = self.softmax(cos_value).view(-1, 1)
+
+        #
         input = self.dropout(embed)
         batch_input_packed = pack_padded_sequence(input, sentences_lens, batch_first=True)  # fixme
-        encoder_outputs_packed, (h_last, c_last) = self.lstm(batch_input_packed)  # h_last: (1，(n-1)*b_s, 2 * h_s)
+        encoder_outputs_packed, (h_last, c_last) = self.lstm(batch_input_packed)  # h_last: (1，(n-1)*b_s, h_s)
         encoder_outputs, _ = pad_packed_sequence(encoder_outputs_packed, batch_first=True)  # fixme 怎么指定pad_idx
 
         # sum
-        lst_reverse = sorted(lst, key = lambda d: lst[d])
-        h_last = [h_last[0][lst_reverse[i]] for i in range((n-1) * batch_size)]  # ((n-1)*b_s, 2*h_s)
-        h_last = [sum([h_last[i+j] for j in range(0, n-1)], 0)  for i in range(0, (n-1)*batch_size, (n-1))]
-        #h_last = [h_last[i+n-2]  for i in range(0, (n-1)*batch_size, (n-1))]
+        h_last = [h_last[0][lst_reverse[i]] for i in range((n-1) * batch_size)] # ((n-1)*b_s, h_s) h_last排列
+        h_input = torch.cat(h_last).view(batch_size, n-1, -1)
+        h_last, _ = self.seq_lstm_h(h_input)  # ((n-1)*b_s, h_s)
+        h_last_weight = torch.cat(h_last).view((n-1)*batch_size, -1) * weight
+        h_last = [sum([h_last_weight[i+j] for j in range(0, n-1)], 0)  for i in range(0, (n-1)*batch_size, (n-1))]
         h_last = torch.cat(h_last).view(1, batch_size, -1)
-        c_last = [c_last[0][lst_reverse[i]] for i in range((n-1) * batch_size)]  # ((n-1)*b_s, 2*h_s)
-        c_last = [sum([c_last[i+j] for j in range(0, n-1)], 0)  for i in range(0, (n-1)*batch_size, (n-1))]
-        #c_last = [c_last[i+n-2]  for i in range(0, (n-1)*batch_size, (n-1))]
+
+
+        c_last = [c_last[0][lst_reverse[i]] for i in range((n-1) * batch_size)]  # ((n-1)*b_s, h_s)
+        c_input = torch.cat(c_last).view(batch_size, n-1, -1)
+        c_last, _ = self.seq_lstm_c(c_input)  # ((n-1)*b_s, h_s)
+        c_last_weight = torch.cat(c_last).view((n-1)*batch_size, -1) * weight
+        c_last = [sum([c_last_weight[i+j] for j in range(0, n-1)], 0)  for i in range(0, (n-1)*batch_size, (n-1))]
         c_last = torch.cat(c_last).view(1, batch_size, -1)
         return encoder_outputs, (h_last, c_last)
 
@@ -57,73 +76,6 @@ class Encoder(nn.Module):
         # weight = [self.cos(h_last[i+j].view(1,-1), h_last[i+n-2].view(1,-1)) \
         #                             for j in range(0, n-2) for i in range(0, (n-1)*batch_size, (n-1))].view(n-1, -1)
         # print (weight);exit(0)
-
-
-# class AttnDecoder(nn.Module):
-#     def __init__(self, embed_size, hidden_size, dropout, lang, key_flag='True'):
-#         super(AttnDecoder, self).__init__()
-#         self.embed_size = embed_size
-#         self.hidden_size = hidden_size
-#         self.dropout = nn.Dropout(dropout)
-#         self.V = lang.word_size
-#         self.lstmcell = nn.LSTMCell(self.embed_size, self.hidden_size)
-#         self.key_flag = key_flag
-#         self.attn = nn.Sequential(
-#             nn.Linear(self.hidden_size*2, self.embed_size),
-#             nn.Tanh(),
-#             nn.Linear(self.embed_size, self.embed_size),
-#             nn.Tanh(),
-#             nn.Linear(self.embed_size, 1)
-#         )
-#         self.attn_key = nn.Sequential(
-#             nn.Linear(self.embed_size + self.hidden_size, self.embed_size),
-#             nn.Tanh(),
-#             nn.Linear(self.embed_size, self.embed_size),
-#             nn.Tanh(),
-#             nn.Linear(self.embed_size, 1)
-#         )
-#         self.softmax = nn.LogSoftmax()
-#         self.ssoftmax = nn.Softmax()
-#         #self.attn_linear = nn.Linear(2*self.hidden_size, self.V)
-#         self.linear = nn.Linear(2*self.hidden_size, self.V)
-#         self.embedding = nn.Embedding(self.V, self.embed_size)  # bug
-#
-#     def forward(self, input, h_c, encoder_outputs, k, attn_flag=True):
-#         '''
-#
-#         :param input:
-#         :param h_c:
-#         :param encoder_outputs: (b_s, m_l, h_s)
-#         :param attn_flag:  是否使用Attention
-#         :return:
-#         '''
-#         embed = self.embedding(input)
-#         input = self.dropout(embed)
-#         h_t, c_t = self.lstmcell(input, h_c)  # input:(b_s, e_s) h_c:元组,应该变为(b_s, h_s) h_t, c_t:(b_s, h_s)
-#         if (attn_flag == True):
-#             h_t_extend = torch.cat([h_t.unsqueeze(1)] * encoder_outputs.size()[1], 1)  # (b_s, m_l, h_s)
-#             u_t = self.attn(torch.cat((encoder_outputs, h_t_extend), 2))  # (b_s, m_l, 1)
-#             #a_t = self.softmax(u_t)  # ?softmax？
-#             a_t = self.ssoftmax(u_t.squeeze(2)).unsqueeze(2)
-#             #a_t = u_t
-#             h_t_ = (torch.sum((a_t * encoder_outputs), 1))  # (b_s, h_s)
-#             batch_size = len(h_t_)
-#             kv = len(k)
-#             h_t_extend_k = torch.cat([h_t.unsqueeze(1)] * kv, 1)  # (b_s, kv, h_s)
-#             k_extend = torch.cat([k.unsqueeze(0)] * batch_size, 0)  # (b_s, kv, e_s)
-#             u_k_t = self.attn_key(torch.cat((h_t_extend_k, k_extend), 2))  # (b_s, kv, 1)
-#             tmp = Variable(torch.FloatTensor([0.0] * batch_size * (self.V - kv)).view(batch_size, \
-#                          -1, 1))  # fixme requires_grad
-#             tmp = tmp.cuda() if use_cuda else tmp
-#             v_k_t = torch.cat([tmp, u_k_t], 1).squeeze(2)  # (b_s, V)
-#             o_t = self.linear(torch.cat((h_t, h_t_), 1)) + v_k_t if self.key_flag=='True' \
-#                 else self.linear(torch.cat((h_t, h_t_), 1)) # (batch_size, V)
-#             y_t = self.softmax(o_t)  # 用于预测下一个word
-#         else:
-#             o_t = self.linear(h_t)
-#             y_t = self.softmax(o_t)
-#         h_c = (h_t, c_t)
-#         return y_t, h_c
 
 
 class SumDecoder(nn.Module):

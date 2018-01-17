@@ -48,18 +48,19 @@ class Encoder(nn.Module):
         #
         input = self.dropout(embed)
         batch_input_packed = pack_padded_sequence(input, sentences_lens, batch_first=True)  # fixme
-        encoder_outputs_packed, (h_last, c_last) = self.lstm(batch_input_packed)  # h_last: (1，(n-1)*b_s, 2 * h_s)
+        encoder_outputs_packed, (h_last, c_last) = self.lstm(batch_input_packed)  # h_last: (1，(n-1)*b_s, h_s)
         encoder_outputs, _ = pad_packed_sequence(encoder_outputs_packed, batch_first=True)  # fixme 怎么指定pad_idx
 
         # sum
-        h_last = [h_last[0][lst_reverse[i]] for i in range((n-1) * batch_size)] # ((n-1)*b_s, 2*h_s)
+        h_last = [h_last[0][lst_reverse[i]] for i in range((n-1) * batch_size)] # ((n-1)*b_s, h_s)
         h_last_weight = torch.cat(h_last).view((n-1)*batch_size, -1) * weight
-        h_last = [sum([h_last[i+j] for j in range(0, n-1)], 0)  for i in range(0, (n-1)*batch_size, (n-1))]
+        h_last = [sum([h_last_weight[i+j] for j in range(0, n-1)], 0)  for i in range(0, (n-1)*batch_size, (n-1))]
         #h_last = [h_last[i+n-2]  for i in range(0, (n-1)*batch_size, (n-1))]
         h_last = torch.cat(h_last).view(1, batch_size, -1)
-        c_last = [c_last[0][lst_reverse[i]] for i in range((n-1) * batch_size)]  # ((n-1)*b_s, 2*h_s)
+
+        c_last = [c_last[0][lst_reverse[i]] for i in range((n-1) * batch_size)]  # ((n-1)*b_s, h_s)
         c_last_weight = torch.cat(c_last).view((n-1)*batch_size, -1) * weight
-        c_last = [sum([c_last[i+j] for j in range(0, n-1)], 0)  for i in range(0, (n-1)*batch_size, (n-1))]
+        c_last = [sum([c_last_weight[i+j] for j in range(0, n-1)], 0)  for i in range(0, (n-1)*batch_size, (n-1))]
         #c_last = [c_last[i+n-2]  for i in range(0, (n-1)*batch_size, (n-1))]
         c_last = torch.cat(c_last).view(1, batch_size, -1)
         return encoder_outputs, (h_last, c_last)

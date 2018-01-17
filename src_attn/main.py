@@ -169,6 +169,8 @@ def main():
     logging.info('Trianing complete! best valid bleu score: {0} best test bleu score: {1} best valid F: {2} best test F: {3}'\
                  .format(best_valid_bleu_score, best_test_bleu_score, best_valid_f, best_test_f))
     logging.info('suffix is {0}'.format(args.parallel_suffix))
+    print (args)
+
 
 
 def evaluate(keys_idx, encoder, decoder, encoderdecoder, instances_idx, instances, lang, \

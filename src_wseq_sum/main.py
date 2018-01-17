@@ -44,7 +44,7 @@ def main():
 
 
 
-
+    logging.info('--------------------WSum test---------------------')
     args = cmd.parse_args(sys.argv[2:])
     print (args)
     # 存储参数配置
@@ -186,6 +186,7 @@ def main():
     logging.info('Trianing complete! best valid bleu score: {0} best test bleu score: {1} best valid F: {2} best test F: {3}'\
                  .format(best_valid_bleu_score, best_test_bleu_score, best_valid_f, best_test_f))
     logging.info('suffix is {0}'.format(args.parallel_suffix))
+    print (args)
 
 
 def evaluate(keys_idx, encoder, decoder, encoderdecoder, instances_idx, instances_answer, lang, \
@@ -233,8 +234,6 @@ def evaluate(keys_idx, encoder, decoder, encoderdecoder, instances_idx, instance
             predict_all.append(batch_predict)
             gold_all.append(batch_gold)
     predict_sentences, gold_sentences = transfor_idx_to_sentences(predict_all, gold_all, lang)  # fixme 这里有问题
-    print (predict_sentences)
-    #print (gold_sentences)
 
     with codecs.open(os.path.join(bleu_path, ''.join(['predict', parallel_suffix])), 'w', encoding='utf-8') as fp:
         fp.write('\n\n'.join(predict_sentences))

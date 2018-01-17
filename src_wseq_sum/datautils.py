@@ -9,6 +9,7 @@ from collections import defaultdict
 import copy
 from torch.autograd import Variable
 import torch
+import itertools
 
 use_cuda = torch.cuda.is_available()
 oov = 1
@@ -280,6 +281,9 @@ def sort_instances(instances_idx, instances):
             instances_answer_dict[len(instance_idx)].append(instance[-1])
     return instances_idx_dict, instances_answer_dict
 
+
+def flatten(lst):
+    return list(itertools.chain.from_iterable(lst))
 
 
 def generate_batch(instances, batch_gold, batch_size, pad_idx):
