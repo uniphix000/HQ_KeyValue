@@ -219,8 +219,8 @@ def generate_instances(keys, train_dialogs, triples, value_to_abstract_keys):
     instances = []
     for dialog in train_dialogs:
         if dialog is not None:
-            if (1):
-            #if (dialog['scenario']['task']['intent'] == 'schedule'):
+            #if (1):
+            if (dialog['scenario']['task']['intent'] == 'navigate'):
                 flag = True
                 for dialogue in dialog['dialogue']:
                     if (dialogue['turn'] == 'assistant'):
