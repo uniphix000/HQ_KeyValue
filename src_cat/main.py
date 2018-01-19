@@ -106,7 +106,12 @@ def main():
     logging.info('trainging size:{0} valid size:{1} test size:{2}'.format(sorted_train_instances_size, \
                                             sorted_valid_instances_size, sorted_test_instances_size))
 
-    encoder = Encoder(args.embed_size, args.hidden_size, args.dropout, lang)
+    max_utterance_num = 0
+    for key,value in sorted_train_instances_idx.items():
+        if len(value) != 0:
+            max_utterance_num = max(key, max_utterance_num)
+
+    encoder = Encoder(args.embed_size, args.hidden_size, args.dropout, lang, max_utterance_num)
     decoder = SumDecoder(args.embed_size, args.hidden_size, args.dropout, lang, args.key_flag)
     encoderdecoder = EncoderDecoder(args.embed_size, args.hidden_size, args.dropout, lang)
     encoder = encoder.cuda() if use_cuda else encoder
@@ -121,10 +126,6 @@ def main():
     best_valid_f, best_test_f = 0, 0
     for i in range(args.max_epoch):
         logging.info('--------------------Round {0}---------------------'.format(i))
-        max_utterance_num = 0
-        for key,value in sorted_train_instances_idx.items():
-            if value is not []:
-                max_utterance_num = max(key, max_utterance_num)
         for j in range(2, max_utterance_num + 2, 2):
             instances_size = len(sorted_train_instances_idx[j])
             order = list(range(instances_size))
@@ -150,7 +151,8 @@ def main():
                 decoder.zero_grad()
                 encoderdecoder.zero_grad()
                 loss = encoderdecoder.forward(batch_input, batch_output, sentence_lens, keys_idx, \
-                                              encoder, decoder, lang.word2idx['pad'], args.embed_size, batch_size, n, lst)
+                                              encoder, decoder, lang.word2idx['pad'], args.embed_size,\
+                                              batch_size, n, lst)
                 loss.backward()
                 clip_grad_norm(encoder.parameters(), args.grad_clip)
                 clip_grad_norm(decoder.parameters(), args.grad_clip)
@@ -234,6 +236,7 @@ def evaluate(keys_idx, encoder, decoder, encoderdecoder, instances_idx, instance
             predict_all.append(batch_predict)
             gold_all.append(batch_gold)
     predict_sentences, gold_sentences = transfor_idx_to_sentences(predict_all, gold_all, lang)  # fixme 这里有问题
+    #print (gold_sentences)
 
     with codecs.open(os.path.join(bleu_path, ''.join(['predict', parallel_suffix])), 'w', encoding='utf-8') as fp:
         fp.write('\n\n'.join(predict_sentences))

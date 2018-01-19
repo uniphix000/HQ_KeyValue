@@ -44,7 +44,7 @@ def main():
 
 
 
-
+    logging.info('--------------------WSum test---------------------')
     args = cmd.parse_args(sys.argv[2:])
     print (args)
     # 存储参数配置
@@ -106,7 +106,11 @@ def main():
     logging.info('trainging size:{0} valid size:{1} test size:{2}'.format(sorted_train_instances_size, \
                                             sorted_valid_instances_size, sorted_test_instances_size))
 
-    encoder = Encoder(args.embed_size, args.hidden_size, args.dropout, lang)
+    max_utterance_num = 0
+    for key,value in sorted_train_instances_idx.items():
+        if value is not []:
+            max_utterance_num = max(key, max_utterance_num)
+    encoder = Encoder(args.embed_size, args.hidden_size, args.dropout, lang, max_utterance_num)
     decoder = SumDecoder(args.embed_size, args.hidden_size, args.dropout, lang, args.key_flag)
     encoderdecoder = EncoderDecoder(args.embed_size, args.hidden_size, args.dropout, lang)
     encoder = encoder.cuda() if use_cuda else encoder
@@ -117,14 +121,14 @@ def main():
     encoderdecoder_optimizer = optim.Adam(decoder.parameters(), lr=args.lr, weight_decay=args.l2)
 
     # train
+
+
     best_valid_bleu_score, best_test_bleu_score = 0, 0
     best_valid_f, best_test_f = 0, 0
     for i in range(args.max_epoch):
         logging.info('--------------------Round {0}---------------------'.format(i))
-        max_utterance_num = 0
-        for key,value in sorted_train_instances_idx.items():
-            if value is not []:
-                max_utterance_num = max(key, max_utterance_num)
+
+
         for j in range(2, max_utterance_num + 2, 2):
             instances_size = len(sorted_train_instances_idx[j])
             order = list(range(instances_size))
