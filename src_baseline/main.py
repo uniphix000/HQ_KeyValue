@@ -189,7 +189,6 @@ def main():
     print (args)
 
 
-
 def evaluate(keys_idx, encoder, decoder, encoderdecoder, instances_idx, instances_answer, lang, \
                               batch_size, embed_size, hidden_size, bleu_path, parallel_suffix):
     '''
@@ -235,7 +234,6 @@ def evaluate(keys_idx, encoder, decoder, encoderdecoder, instances_idx, instance
             predict_all.append(batch_predict)
             gold_all.append(batch_gold)
     predict_sentences, gold_sentences = transfor_idx_to_sentences(predict_all, gold_all, lang)  # fixme 这里有问题
-    #print (gold_sentences)
 
     with codecs.open(os.path.join(bleu_path, ''.join(['predict', parallel_suffix])), 'w', encoding='utf-8') as fp:
         fp.write('\n\n'.join(predict_sentences))

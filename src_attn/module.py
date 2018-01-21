@@ -71,7 +71,7 @@ class AttnDecoder(nn.Module):
         self.linear0 = nn.Linear(self.hidden_size, self.V)
         self.embedding = nn.Embedding(self.V, self.embed_size)  # bug
 
-    def forward(self, input, h_c, encoder_outputs, k, attn_flag=False):
+    def forward(self, input, h_c, encoder_outputs, k, attn_flag=True):
         '''
 
         :param input:
@@ -101,6 +101,7 @@ class AttnDecoder(nn.Module):
             v_k_t = torch.cat([tmp, u_k_t], 1).squeeze(2)  # (b_s, V)
             o_t = self.linear(torch.cat((h_t, h_t_), 1)) + v_k_t if self.key_flag=='True' \
                 else self.linear(torch.cat((h_t, h_t_), 1)) # (batch_size, V)
+            # o_t = self.linear0(h_t) + v_k_t
             y_t = self.softmax(o_t)  # 用于预测下一个word
         else:
             o_t = self.linear0(h_t)

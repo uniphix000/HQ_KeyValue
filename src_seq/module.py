@@ -44,12 +44,11 @@ class Encoder(nn.Module):
         # seq
         lst_reverse = sorted(lst, key = lambda d: lst[d])
         h_last = [h_last[0][lst_reverse[i]] for i in range((n-1) * batch_size)]  # ((n-1)*b_s, h_s)
-        #h_last = [sum([h_last[i+j] for j in range(0, n-1)], 0)  for i in range(0, (n-1)*batch_size, (n-1))]
         h_input = torch.cat(h_last).view(batch_size, n-1, -1)
         _, (h_last, _) = self.seq_lstm_h(h_input)  # (b_s, h_s)
         h_last = h_last.contiguous().view(1, batch_size, -1)
+
         c_last = [c_last[0][lst_reverse[i]] for i in range((n-1) * batch_size)]  # ((n-1)*b_s, h_s)
-        #c_last = [sum([c_last[i+j] for j in range(0, n-1)], 0)  for i in range(0, (n-1)*batch_size, (n-1))]
         c_input = torch.cat(c_last).view(batch_size, n-1, -1)
         _, (c_last, _) = self.seq_lstm_c(c_input)  # (b_s, h_s)
         c_last = c_last.contiguous().view(1, batch_size, -1)
@@ -70,7 +69,7 @@ class SumDecoder(nn.Module):
         #self.attn_linear = nn.Linear(2*self.hidden_size, self.V)
         self.linear = nn.Linear(self.hidden_size, self.V)
         self.attn_key = nn.Sequential(
-            nn.Linear(self.embed_size + 2*self.hidden_size, self.embed_size),
+            nn.Linear(self.embed_size + self.hidden_size, self.embed_size),
             nn.Tanh(),
             nn.Linear(self.embed_size, self.embed_size),
             nn.Tanh(),
@@ -99,7 +98,7 @@ class SumDecoder(nn.Module):
             h_t_extend_k = torch.cat([h_t.unsqueeze(1)] * kv, 1)  # (b_s, kv, h_s)
             context_vector_extend_k = torch.cat([context_vector.unsqueeze(1)] * kv, 1)  # (b_s, kv, h_s)
             k_extend = torch.cat([k.unsqueeze(0)] * batch_size, 0)  # (b_s, kv, e_s)
-            u_k_t = self.attn_key(torch.cat((context_vector_extend_k, h_t_extend_k, k_extend), 2))  # (b_s, kv, 1) #[context;h_t;kj]
+            u_k_t = self.attn_key(torch.cat((h_t_extend_k, k_extend), 2))  # (b_s, kv, 1) #[context;h_t;kj]
             tmp = Variable(torch.FloatTensor([0.0] * batch_size * (self.V - kv)).view(batch_size, \
                          -1, 1))  # fixme requires_grad
             tmp = tmp.cuda() if use_cuda else tmp

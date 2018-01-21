@@ -44,7 +44,7 @@ class Encoder(nn.Module):
         sentence_embed = torch.sum(embed, 1)  # ((n-1)*b_s, e_s)  # fixme 怎么排除pad的影响
         sentence_embed = [sentence_embed[lst_reverse[i]] for i in range((n-1) * batch_size)]
         cos_value = torch.cat(flatten([[self.cos(sentence_embed[i+j], sentence_embed[i+n-2]) for j in range(0, n-1)] \
-                     for i in range(0, (n-1)*batch_size, (n-1))])).view(batch_size, -1)  #
+                     for i in range(0, (n-1)*batch_size, (n-1))])).view(batch_size, -1)  # (b_s, n-1)
         weight = self.softmax(cos_value).view(-1, 1)
 
         #
@@ -91,7 +91,7 @@ class SumDecoder(nn.Module):
         self.ssoftmax = nn.Softmax()
         #self.attn_linear = nn.Linear(2*self.hidden_size, self.V)
         self.attn_key = nn.Sequential(
-            nn.Linear(self.embed_size + 2*self.hidden_size, self.embed_size),
+            nn.Linear(self.embed_size + self.hidden_size, self.embed_size),
             nn.Tanh(),
             nn.Linear(self.embed_size, self.embed_size),
             nn.Tanh(),
@@ -121,7 +121,7 @@ class SumDecoder(nn.Module):
             h_t_extend_k = torch.cat([h_t.unsqueeze(1)] * kv, 1)  # (b_s, kv, h_s)
             context_vector_extend_k = torch.cat([context_vector.unsqueeze(1)] * kv, 1)  # (b_s, kv, h_s)
             k_extend = torch.cat([k.unsqueeze(0)] * batch_size, 0)  # (b_s, kv, e_s)
-            u_k_t = self.attn_key(torch.cat((context_vector_extend_k, h_t_extend_k, k_extend), 2))  # (b_s, kv, 1) #[context;h_t;kj]
+            u_k_t = self.attn_key(torch.cat((h_t_extend_k, k_extend), 2))  # (b_s, kv, 1) #[context;h_t;kj]
             tmp = Variable(torch.FloatTensor([0.0] * batch_size * (self.V - kv)).view(batch_size, \
                          -1, 1))  # fixme requires_grad
             tmp = tmp.cuda() if use_cuda else tmp

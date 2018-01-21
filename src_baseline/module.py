@@ -12,7 +12,7 @@ from datautils import use_cuda
 
 
 class Encoder(nn.Module):
-    def __init__(self, embed_size, hidden_size, dropout, lang, max_utterance_num):
+    def __init__(self, embed_size, hidden_size, dropout, lang):
         super(Encoder, self).__init__()
         self.embed_size = embed_size
         self.hidden_size = hidden_size
@@ -21,9 +21,6 @@ class Encoder(nn.Module):
         self.embedding = nn.Embedding(self.V, self.embed_size)
         self.lstm = nn.LSTM(self.embed_size, self.hidden_size, batch_first=True)
         self.cos = nn.CosineSimilarity(dim=1)
-        self.max_utterance_num = max_utterance_num
-        self.linear_h = nn.Linear((max_utterance_num-1) * self.hidden_size, self.hidden_size)
-        self.linear_c = nn.Linear((max_utterance_num-1) * self.hidden_size, self.hidden_size)
 
     def forward(self, batch_input, sentences_lens, keys, pad_idx, batch_size, n, lst):
         '''
@@ -43,33 +40,15 @@ class Encoder(nn.Module):
         encoder_outputs, _ = pad_packed_sequence(encoder_outputs_packed, batch_first=True)  # fixme 怎么指定pad_idx
 
         # sum
-        hidden_size = h_last.size()[2]
         lst_reverse = sorted(lst, key = lambda d: lst[d])
-        tmp = [Variable(torch.FloatTensor([0]*hidden_size)).cuda() for k in range(self.max_utterance_num - n)] if use_cuda else \
-            [Variable(torch.FloatTensor([0]*hidden_size)) for k in range(self.max_utterance_num - n)]
         h_last = [h_last[0][lst_reverse[i]] for i in range((n-1) * batch_size)]  # ((n-1)*b_s, h_s)
-        h_last = [torch.cat([h_last[i+j] for j in range(0, n-1)]  + tmp) \
-                            for i in range(0, (n-1)*batch_size, (n-1))]  # cat
-        h_last = torch.cat(h_last).view(batch_size, -1)  # (b_s, (max-n)*h_s)
-        h_last = self.linear_h(h_last).view(1, batch_size, -1)  #
-        #h_last = Variable(h_last).cuda() if use_cuda else Variable(h_last)
-
-
+        h_last = [h_last[i+n-2] for i in range(0, (n-1)*batch_size, (n-1))]
+        #h_last = [h_last[i+n-2]  for i in range(0, (n-1)*batch_size, (n-1))]
+        h_last = torch.cat(h_last).view(1, batch_size, -1)
         c_last = [c_last[0][lst_reverse[i]] for i in range((n-1) * batch_size)]  # ((n-1)*b_s, h_s)
-        c_last = [torch.cat([c_last[i+j] for j in range(0, n-1)]  + tmp )\
-                            for i in range(0, (n-1)*batch_size, (n-1))]  # cat
-        c_last = torch.cat(c_last).view(batch_size, -1)  # (b_s, (max-n)*h_s)
-        c_last = self.linear_c(c_last).view(1, batch_size, -1)  #
-        #c_last = Variable(c_last).cuda() if use_cuda else Variable(c_last)
-
-        # if (n>2):
-        #     # sum
-        #     encoder_outputs = [encoder_outputs[lst_reverse[i]] for i in range ((n-1) * batch_size)]
-        #     encoder_outputs = torch.cat([sum([encoder_outputs[i+j] for j in range(0, n-1)], 0)  \
-        #                        for i in range(0, (n-1)*batch_size, (n-1))]).view(batch_size, -1, hidden_size)
-        #     # encoder_outputs = torch.cat([encoder_outputs[i+n-2] \
-        #     #                              for i in range(0, (n-1)*batch_size, (n-1))])
-        #     encoder_outputs = encoder_outputs.cuda() if use_cuda else encoder_outputs
+        c_last = [c_last[i+n-2] for i in range(0, (n-1)*batch_size, (n-1))]
+        #c_last = [c_last[i+n-2]  for i in range(0, (n-1)*batch_size, (n-1))]
+        c_last = torch.cat(c_last).view(1, batch_size, -1)
         return encoder_outputs, (h_last, c_last), keys
 
 
@@ -85,13 +64,6 @@ class SumDecoder(nn.Module):
         self.softmax = nn.LogSoftmax()
         self.ssoftmax = nn.Softmax()
         #self.attn_linear = nn.Linear(2*self.hidden_size, self.V)
-        self.attn = nn.Sequential(
-            nn.Linear(self.hidden_size*2, self.embed_size),
-            nn.Tanh(),
-            nn.Linear(self.embed_size, self.embed_size),
-            nn.Tanh(),
-            nn.Linear(self.embed_size, 1)
-        )
         self.attn_key = nn.Sequential(
             nn.Linear(self.embed_size + self.hidden_size, self.embed_size),
             nn.Tanh(),
@@ -100,10 +72,9 @@ class SumDecoder(nn.Module):
             nn.Linear(self.embed_size, 1)
         )
         self.linear = nn.Linear(self.hidden_size, self.V)
-        self.attn_linear = nn.Linear(2*self.hidden_size, self.V)
         self.embedding = nn.Embedding(self.V, self.embed_size)  #
 
-    def forward(self, input, h_c, k, context_vector, encoder_outputs, attn_flag=True):
+    def forward(self, input, h_c, k, context_vector, attn_flag=True):
         '''
 
         :param input:
@@ -116,10 +87,6 @@ class SumDecoder(nn.Module):
         input = self.dropout(embed)
         h_t, c_t = self.lstmcell(input, h_c)  #
         if attn_flag == True:
-            # h_t_extend = torch.cat([h_t.unsqueeze(1)] * encoder_outputs.size()[1], 1)  # (b_s, m_l, h_s)
-            # u_t = self.attn(torch.cat((encoder_outputs, h_t_extend), 2))  # (b_s, m_l, 1)
-            # a_t = self.ssoftmax(u_t.squeeze(2)).unsqueeze(2)
-            # h_t_ = (torch.sum((a_t * encoder_outputs), 1))  # (b_s, h_s)
             batch_size = len(h_t)
             kv = len(k)
             h_t = h_t.cuda() if use_cuda else h_t
@@ -130,11 +97,9 @@ class SumDecoder(nn.Module):
             k_extend = torch.cat([k.unsqueeze(0)] * batch_size, 0)  # (b_s, kv, e_s)
             u_k_t = self.attn_key(torch.cat((h_t_extend_k, k_extend), 2))  # (b_s, kv, 1) #[context;h_t;kj]
             tmp = Variable(torch.FloatTensor([0.0] * batch_size * (self.V - kv)).view(batch_size, \
-                         -1, 1))  #
+                         -1, 1))  # fixme requires_grad
             tmp = tmp.cuda() if use_cuda else tmp
             v_k_t = torch.cat([tmp, u_k_t], 1).squeeze(2)  # (b_s, V)
-            # o_t = self.attn_linear(torch.cat((h_t, h_t_), 1)) + v_k_t if self.key_flag=='True' \
-            #     else self.linear(h_t) # (batch_size, V)
             o_t = self.linear(h_t) + v_k_t if self.key_flag=='True' \
                 else self.linear(h_t) # (batch_size, V)
             y_t = self.softmax(o_t)  # 用于预测下一个word
@@ -171,7 +136,7 @@ class EncoderDecoder(nn.Module):
         '''
         # encode
         max_length = batch_output.size()[1] if self.training else length_limitation  # fixme
-        encoder_outputs, (h_last, c_last), k = encoder.forward(batch_input, sentences_lens, \
+        _, (h_last, c_last), k = encoder.forward(batch_input, sentences_lens, \
                                                                keys, pad_idx, batch_size, n, lst)  # 这里encoder_outputs是双向的
 
         # decode
@@ -182,7 +147,7 @@ class EncoderDecoder(nn.Module):
         loss = 0
         predict_box = []
         for i in range(max_length - 1):
-            y_t, h_c = decoder.forward(decoder_input, h_c, k, context_vector, encoder_outputs)  # (batch_size, V)
+            y_t, h_c = decoder.forward(decoder_input, h_c, k, context_vector)  # (batch_size, V)
             if self.training:
                 decoder_input = batch_output.transpose(0,1)[i]  # fixme 第一步预测谁？？？？？
                 loss += self.loss(y_t, decoder_input)

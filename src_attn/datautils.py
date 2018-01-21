@@ -25,7 +25,7 @@ def preprocess(path):
 
     for idx,dialog in enumerate(dialogs):
         if (1):
-        # if (dialog['scenario']['task']['intent'] == 'schedule'):
+        #if (dialog['scenario']['task']['intent'] == 'navigate'):
             for dialogue in dialog['dialogue']:
                     dialogue['data']['utterance'] = dialogue['data']['utterance'] + ' '  #fixme 怎么复制并且共享操作
                     if len(dialogue['data']['utterance']) == 0:

@@ -63,7 +63,7 @@ class Encoder(nn.Module):
 
         h_last = [h_last[0][lst_reverse[i]] for i in range((n-1) * batch_size)] # ((n-1)*b_s, h_s) h_last排列
         h_input = torch.cat(h_last).view(batch_size, n-1, -1)
-        h_last, _ = self.seq_lstm_h(h_input)  # ((n-1)*b_s, h_s)
+        h_last, _ = self.seq_lstm_h(h_input)  # (b_s, (n-1), h_s)
         h_last_weight = torch.cat(h_last).view((n-1)*batch_size, -1) * weight
         h_last = [torch.cat([h_last_weight[i+j] for j in range(0, n-1)]  + tmp) \
                             for i in range(0, (n-1)*batch_size, (n-1))]  # cat
@@ -101,6 +101,13 @@ class SumDecoder(nn.Module):
         self.softmax = nn.LogSoftmax()
         self.ssoftmax = nn.Softmax()
         #self.attn_linear = nn.Linear(2*self.hidden_size, self.V)
+        self.attn_key = nn.Sequential(
+            nn.Linear(self.embed_size + self.hidden_size, self.embed_size),
+            nn.Tanh(),
+            nn.Linear(self.embed_size, self.embed_size),
+            nn.Tanh(),
+            nn.Linear(self.embed_size, 1)
+        )
         self.linear = nn.Linear(self.hidden_size, self.V)
         self.embedding = nn.Embedding(self.V, self.embed_size)  #
 
@@ -125,7 +132,7 @@ class SumDecoder(nn.Module):
             h_t_extend_k = torch.cat([h_t.unsqueeze(1)] * kv, 1)  # (b_s, kv, h_s)
             context_vector_extend_k = torch.cat([context_vector.unsqueeze(1)] * kv, 1)  # (b_s, kv, h_s)
             k_extend = torch.cat([k.unsqueeze(0)] * batch_size, 0)  # (b_s, kv, e_s)
-            u_k_t = self.attn_key(torch.cat((context_vector_extend_k, h_t_extend_k, k_extend), 2))  # (b_s, kv, 1) #[context;h_t;kj]
+            u_k_t = self.attn_key(torch.cat((h_t_extend_k, k_extend), 2))  # (b_s, kv, 1) #[context;h_t;kj]
             tmp = Variable(torch.FloatTensor([0.0] * batch_size * (self.V - kv)).view(batch_size, \
                          -1, 1))  # fixme requires_grad
             tmp = tmp.cuda() if use_cuda else tmp
@@ -173,6 +180,7 @@ class EncoderDecoder(nn.Module):
         decoder_input = Variable(torch.LongTensor([0]*batch_size).view(batch_size)).cuda() if use_cuda else \
             Variable(torch.LongTensor([0]*batch_size).view(batch_size))
         h_c = (h_last[0], c_last[0])  # 降维
+        context_vector = h_c[0]
         loss = 0
         predict_box = []
         for i in range(max_length - 1):

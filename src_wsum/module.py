@@ -43,7 +43,7 @@ class Encoder(nn.Module):
         sentence_embed = [sentence_embed[lst_reverse[i]] for i in range((n-1) * batch_size)]
         cos_value = torch.cat(flatten([[self.cos(sentence_embed[i+j], sentence_embed[i+n-2]) for j in range(0, n-1)] \
                      for i in range(0, (n-1)*batch_size, (n-1))])).view(batch_size, -1)  #
-        weight = self.softmax(cos_value).view(-1, 1)
+        weight = self.softmax(cos_value).view(-1, 1)  # ((n-1)*b_s, 1)
 
         #
         input = self.dropout(embed)
@@ -55,17 +55,15 @@ class Encoder(nn.Module):
         h_last = [h_last[0][lst_reverse[i]] for i in range((n-1) * batch_size)] # ((n-1)*b_s, h_s)
         h_last_weight = torch.cat(h_last).view((n-1)*batch_size, -1) * weight
         h_last = [sum([h_last_weight[i+j] for j in range(0, n-1)], 0)  for i in range(0, (n-1)*batch_size, (n-1))]
-        #h_last = [h_last[i+n-2]  for i in range(0, (n-1)*batch_size, (n-1))]
         h_last = torch.cat(h_last).view(1, batch_size, -1)
 
         c_last = [c_last[0][lst_reverse[i]] for i in range((n-1) * batch_size)]  # ((n-1)*b_s, h_s)
         c_last_weight = torch.cat(c_last).view((n-1)*batch_size, -1) * weight
         c_last = [sum([c_last_weight[i+j] for j in range(0, n-1)], 0)  for i in range(0, (n-1)*batch_size, (n-1))]
-        #c_last = [c_last[i+n-2]  for i in range(0, (n-1)*batch_size, (n-1))]
         c_last = torch.cat(c_last).view(1, batch_size, -1)
         return encoder_outputs, (h_last, c_last), keys
 
-        # Todo
+
         # lst_reverse = sorted(lst, key = lambda d: lst[d])
         # h_last = [h_last[0][lst_reverse[i]] for i in range((n-1) * batch_size)]  # ((n-1)*b_s, 2*h_s)
         # weight = [self.cos(h_last[i+j].view(1,-1), h_last[i+n-2].view(1,-1)) \
@@ -116,7 +114,7 @@ class SumDecoder(nn.Module):
             h_t_extend_k = torch.cat([h_t.unsqueeze(1)] * kv, 1)  # (b_s, kv, h_s)
             context_vector_extend_k = torch.cat([context_vector.unsqueeze(1)] * kv, 1)  # (b_s, kv, h_s)
             k_extend = torch.cat([k.unsqueeze(0)] * batch_size, 0)  # (b_s, kv, e_s)
-            u_k_t = self.attn_key(torch.cat((context_vector_extend_k, h_t_extend_k, k_extend), 2))  # (b_s, kv, 1) #[context;h_t;kj]
+            u_k_t = self.attn_key(torch.cat((h_t_extend_k, k_extend), 2))  # (b_s, kv, 1) #[context;h_t;kj]
             tmp = Variable(torch.FloatTensor([0.0] * batch_size * (self.V - kv)).view(batch_size, \
                          -1, 1))  # fixme requires_grad
             tmp = tmp.cuda() if use_cuda else tmp
