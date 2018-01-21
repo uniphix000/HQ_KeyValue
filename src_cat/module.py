@@ -33,8 +33,8 @@ class Encoder(nn.Module):
         :param
         :return:  h_c: (1, b_s, 2*h_s)
         '''
-        # embed_key = self.embedding(keys.squeeze(2))
-        # k = torch.sum(embed_key, 1)  # (kv, embed_size)
+        embed_key = self.embedding(keys.squeeze(2))
+        keys = torch.sum(embed_key, 1)  # (kv, embed_size)
 
         embed = self.embedding(batch_input)  # ((n-1)*b_s, m_l, e_s)
         input = self.dropout(embed)
@@ -46,7 +46,7 @@ class Encoder(nn.Module):
         hidden_size = h_last.size()[2]
         lst_reverse = sorted(lst, key = lambda d: lst[d])
         tmp = [Variable(torch.FloatTensor([0]*hidden_size)).cuda() for k in range(self.max_utterance_num - n)] if use_cuda else \
-            [Variable(torch.FloatTensor([0]*hidden_size)) for k in range(max_utterance_num - n)]
+            [Variable(torch.FloatTensor([0]*hidden_size)) for k in range(self.max_utterance_num - n)]
         h_last = [h_last[0][lst_reverse[i]] for i in range((n-1) * batch_size)]  # ((n-1)*b_s, h_s)
         h_last = [torch.cat([h_last[i+j] for j in range(0, n-1)]  + tmp) \
                             for i in range(0, (n-1)*batch_size, (n-1))]  # cat
@@ -61,7 +61,16 @@ class Encoder(nn.Module):
         c_last = torch.cat(c_last).view(batch_size, -1)  # (b_s, (max-n)*h_s)
         c_last = self.linear_c(c_last).view(1, batch_size, -1)  #
         #c_last = Variable(c_last).cuda() if use_cuda else Variable(c_last)
-        return encoder_outputs, (h_last, c_last)
+
+        if (n>2):
+            # sum
+            encoder_outputs = [encoder_outputs[lst_reverse[i]] for i in range ((n-1) * batch_size)]
+            encoder_outputs = torch.cat([sum([encoder_outputs[i+j] for j in range(0, n-1)], 0)  \
+                               for i in range(0, (n-1)*batch_size, (n-1))]).view(batch_size, -1, hidden_size)
+            # encoder_outputs = torch.cat([encoder_outputs[i+n-2] \
+            #                              for i in range(0, (n-1)*batch_size, (n-1))])
+            encoder_outputs = encoder_outputs.cuda() if use_cuda else encoder_outputs
+        return encoder_outputs, (h_last, c_last), keys
 
 
 class SumDecoder(nn.Module):
@@ -76,10 +85,25 @@ class SumDecoder(nn.Module):
         self.softmax = nn.LogSoftmax()
         self.ssoftmax = nn.Softmax()
         #self.attn_linear = nn.Linear(2*self.hidden_size, self.V)
+        self.attn = nn.Sequential(
+            nn.Linear(self.hidden_size*2, self.embed_size),
+            nn.Tanh(),
+            nn.Linear(self.embed_size, self.embed_size),
+            nn.Tanh(),
+            nn.Linear(self.embed_size, 1)
+        )
+        self.attn_key = nn.Sequential(
+            nn.Linear(self.embed_size + 2*self.hidden_size, self.embed_size),
+            nn.Tanh(),
+            nn.Linear(self.embed_size, self.embed_size),
+            nn.Tanh(),
+            nn.Linear(self.embed_size, 1)
+        )
         self.linear = nn.Linear(self.hidden_size, self.V)
+        self.attn_linear = nn.Linear(2*self.hidden_size, self.V)
         self.embedding = nn.Embedding(self.V, self.embed_size)  #
 
-    def forward(self, input, h_c, attn_flag=True):
+    def forward(self, input, h_c, k, context_vector, encoder_outputs, attn_flag=True):
         '''
 
         :param input:
@@ -91,8 +115,30 @@ class SumDecoder(nn.Module):
         embed = self.embedding(input)  #
         input = self.dropout(embed)
         h_t, c_t = self.lstmcell(input, h_c)  #
-        o_t = self.linear(h_t)
-        y_t = self.softmax(o_t)
+        if attn_flag == True:
+            h_t_extend = torch.cat([h_t.unsqueeze(1)] * encoder_outputs.size()[1], 1)  # (b_s, m_l, h_s)
+            u_t = self.attn(torch.cat((encoder_outputs, h_t_extend), 2))  # (b_s, m_l, 1)
+            a_t = self.ssoftmax(u_t.squeeze(2)).unsqueeze(2)
+            h_t_ = (torch.sum((a_t * encoder_outputs), 1))  # (b_s, h_s)
+            batch_size = len(h_t)
+            kv = len(k)
+            h_t = h_t.cuda() if use_cuda else h_t
+            context_vector = context_vector.cuda() if use_cuda else context_vector
+            k = k.cuda() if use_cuda else k
+            h_t_extend_k = torch.cat([h_t.unsqueeze(1)] * kv, 1)  # (b_s, kv, h_s)
+            context_vector_extend_k = torch.cat([context_vector.unsqueeze(1)] * kv, 1)  # (b_s, kv, h_s)
+            k_extend = torch.cat([k.unsqueeze(0)] * batch_size, 0)  # (b_s, kv, e_s)
+            u_k_t = self.attn_key(torch.cat((context_vector_extend_k, h_t_extend_k, k_extend), 2))  # (b_s, kv, 1) #[context;h_t;kj]
+            tmp = Variable(torch.FloatTensor([0.0] * batch_size * (self.V - kv)).view(batch_size, \
+                         -1, 1))  # fixme requires_grad
+            tmp = tmp.cuda() if use_cuda else tmp
+            v_k_t = torch.cat([tmp, u_k_t], 1).squeeze(2)  # (b_s, V)
+            o_t = self.attn_linear(torch.cat((h_t, h_t_), 1)) + v_k_t if self.key_flag=='True' \
+                else self.linear(h_t) # (batch_size, V)
+            y_t = self.softmax(o_t)  # 用于预测下一个word
+        else:
+            o_t = self.linear(h_t)
+            y_t = self.softmax(o_t)
         h_c = (h_t, c_t)
         return y_t, h_c
 
@@ -123,17 +169,18 @@ class EncoderDecoder(nn.Module):
         '''
         # encode
         max_length = batch_output.size()[1] if self.training else length_limitation  # fixme
-        _, (h_last, c_last) = encoder.forward(batch_input, sentences_lens, \
+        encoder_outputs, (h_last, c_last), k = encoder.forward(batch_input, sentences_lens, \
                                                                keys, pad_idx, batch_size, n, lst)  # 这里encoder_outputs是双向的
 
         # decode
         decoder_input = Variable(torch.LongTensor([0]*batch_size).view(batch_size)).cuda() if use_cuda else \
             Variable(torch.LongTensor([0]*batch_size).view(batch_size))
         h_c = (h_last[0], c_last[0])  # 降维
+        context_vector = h_c[0]
         loss = 0
         predict_box = []
         for i in range(max_length - 1):
-            y_t, h_c = decoder.forward(decoder_input, h_c)  # (batch_size, V)
+            y_t, h_c = decoder.forward(decoder_input, h_c, k, context_vector, encoder_outputs)  # (batch_size, V)
             if self.training:
                 decoder_input = batch_output.transpose(0,1)[i]  # fixme 第一步预测谁？？？？？
                 loss += self.loss(y_t, decoder_input)
