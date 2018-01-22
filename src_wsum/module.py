@@ -114,7 +114,7 @@ class SumDecoder(nn.Module):
             h_t_extend_k = torch.cat([h_t.unsqueeze(1)] * kv, 1)  # (b_s, kv, h_s)
             context_vector_extend_k = torch.cat([context_vector.unsqueeze(1)] * kv, 1)  # (b_s, kv, h_s)
             k_extend = torch.cat([k.unsqueeze(0)] * batch_size, 0)  # (b_s, kv, e_s)
-            u_k_t = self.attn_key(torch.cat((h_t_extend_k, k_extend), 2))  # (b_s, kv, 1) #[context;h_t;kj]
+            u_k_t = self.attn_key(torch.cat((context_vector_extend_k, h_t_extend_k, k_extend), 2))  # (b_s, kv, 1) #[context;h_t;kj]
             tmp = Variable(torch.FloatTensor([0.0] * batch_size * (self.V - kv)).view(batch_size, \
                          -1, 1))  # fixme requires_grad
             tmp = tmp.cuda() if use_cuda else tmp
