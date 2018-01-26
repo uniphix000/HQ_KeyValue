@@ -143,10 +143,11 @@ def noralize_value(sentence, value_to_abstract_keys):
 
 
 if __name__ == '__main__':
-    train_dialogs, _, _ = data_preprocess('../data')
+    train_dialogs, valid_dialogs, test_dialogs = data_preprocess('../data')
+    train_dialogs = valid_dialogs
     keys, triples, entities, value_to_abstract_keys = key_extraction(train_dialogs, '../data')
     train_instances = generate_instances(keys, train_dialogs, triples, value_to_abstract_keys)
-    with codecs.open('../data/corpus', 'w', encoding='utf-8') as fp:
+    with codecs.open('../data/valid_corpus', 'w', encoding='utf-8') as fp:
         for dialog in train_instances:
             fp.write('\n'.join(dialog))
             fp.write('\n\n\n')

@@ -278,13 +278,13 @@ def generate_batch(instances, batch_gold, batch_size, pad_idx):
 
     input_max_length = len(batch_input[0])
     output_max_length = max([len(batch_output[i]) for i in range(batch_size)])
+    sentence_lens = [len(batch_input[i]) for i in range(batch_size)]
 
     batch_input = [batch_input[i] + [pad_idx] * (input_max_length - len(batch_input[i])) for i in range(batch_size)]
     batch_output = [batch_output[i] + [pad_idx] * (output_max_length - len(batch_output[i])) for i in range(batch_size)]
 
     batch_input = Variable(torch.LongTensor(batch_input)).cuda() if use_cuda else Variable(torch.LongTensor(batch_input))
     batch_output = Variable(torch.LongTensor(batch_output)).cuda() if use_cuda else Variable(torch.LongTensor(batch_output))
-    sentence_lens = [len(batch_input[i]) for i in range(batch_size)]
     return batch_input, batch_output, batch_gold_output, sentence_lens
 
 

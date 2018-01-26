@@ -9,6 +9,7 @@ from torch import optim
 from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from datautils import use_cuda
+import random
 
 
 class Encoder(nn.Module):
@@ -58,7 +59,7 @@ class AttnDecoder(nn.Module):
             nn.Linear(self.embed_size, 1)
         )
         self.attn_key = nn.Sequential(
-            nn.Linear(self.embed_size + 2*self.hidden_size, self.embed_size),
+            nn.Linear(self.embed_size + self.hidden_size, self.embed_size),
             nn.Tanh(),
             nn.Linear(self.embed_size, self.embed_size),
             nn.Tanh(),
@@ -95,7 +96,7 @@ class AttnDecoder(nn.Module):
             h_t_extend_k = torch.cat([h_t.unsqueeze(1)] * kv, 1)  # (b_s, kv, h_s)
             k_extend = torch.cat([k.unsqueeze(0)] * batch_size, 0)  # (b_s, kv, e_s)
             context_vector_extend_k = torch.cat([context_vector.unsqueeze(1)] * kv, 1)
-            u_k_t = self.attn_key(torch.cat((context_vector_extend_k, h_t_extend_k, k_extend), 2))  # (b_s, kv, 1)
+            u_k_t = self.attn_key(torch.cat((h_t_extend_k, k_extend), 2))  # (b_s, kv, 1)
             tmp = Variable(torch.FloatTensor([0.0] * batch_size * (self.V - kv)).view(batch_size, \
                          -1, 1))  # fixme requires_grad
             tmp = tmp.cuda() if use_cuda else tmp

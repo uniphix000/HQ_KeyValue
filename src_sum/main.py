@@ -114,7 +114,7 @@ def main():
     encoderdecoder = encoderdecoder.cuda() if use_cuda else encoderdecoder
     encoder_optimizer = optim.Adam(encoder.parameters(), lr=args.lr, weight_decay=args.l2)
     decoder_optimizer = optim.Adam(decoder.parameters(), lr=args.lr, weight_decay=args.l2)
-    encoderdecoder_optimizer = optim.Adam(decoder.parameters(), lr=args.lr, weight_decay=args.l2)
+    encoderdecoder_optimizer = optim.Adam(encoderdecoder.parameters(), lr=args.lr, weight_decay=args.l2)
 
     # train
     best_valid_bleu_score, best_test_bleu_score = 0, 0
@@ -123,7 +123,7 @@ def main():
         logging.info('--------------------Round {0}---------------------'.format(i))
         max_utterance_num = 0
         for key,value in sorted_train_instances_idx.items():
-            if value is not []:
+            if len(value) != 0:
                 max_utterance_num = max(key, max_utterance_num)
         for j in range(2, max_utterance_num + 2, 2):
             instances_size = len(sorted_train_instances_idx[j])
@@ -208,7 +208,7 @@ def evaluate(keys_idx, encoder, decoder, encoderdecoder, instances_idx, instance
     predict_all = []
     gold_all = []
     for key,value in instances_idx.items():
-        if value is not []:
+        if len(value) != 0:
             max_utterance_num = max(key, max_utterance_num)
     for j in range(2, max_utterance_num + 2, 2):
         instances_size = len(instances_idx[j])

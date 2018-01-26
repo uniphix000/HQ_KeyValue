@@ -114,7 +114,7 @@ def main():
     encoderdecoder = encoderdecoder.cuda() if use_cuda else encoderdecoder
     encoder_optimizer = optim.Adam(encoder.parameters(), lr=args.lr, weight_decay=args.l2)
     decoder_optimizer = optim.Adam(decoder.parameters(), lr=args.lr, weight_decay=args.l2)
-    encoderdecoder_optimizer = optim.Adam(decoder.parameters(), lr=args.lr, weight_decay=args.l2)
+    encoderdecoder_optimizer = optim.Adam(encoderdecoder.parameters(), lr=args.lr, weight_decay=args.l2)
 
     # train
     best_valid_bleu_score, best_test_bleu_score = 0, 0

@@ -60,7 +60,6 @@ class Encoder(nn.Module):
                             for i in range(0, (n-1)*batch_size, (n-1))]  # cat
         c_last = torch.cat(c_last).view(batch_size, -1)  # (b_s, (max-n)*h_s)
         c_last = self.linear_c(c_last).view(1, batch_size, -1)  #
-        #c_last = Variable(c_last).cuda() if use_cuda else Variable(c_last)
 
         # if (n>2):
         #     # sum

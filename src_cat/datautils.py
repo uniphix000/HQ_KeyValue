@@ -275,7 +275,7 @@ def sort_instances(instances_idx, instances):
     instances_idx_dict = {2*i: [] for i in range(10)}
     instances_answer_dict = {2*i: [] for i in range(10)}
     for instance_idx, instance in zip(instances_idx,instances):
-        if (len(instance_idx) % 2 == 0):# & (len(instance_idx) > 3):
+        if (len(instance_idx) % 2 == 0) & (len(instance_idx) > 3):
             instances_idx_dict[len(instance_idx)].append(instance_idx)
             instances_answer_dict[len(instance_idx)].append(instance[-1])
     return instances_idx_dict, instances_answer_dict
