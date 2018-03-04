@@ -1,0 +1,641 @@
+you're welcome .
+
+you're welcome , setting gps to quickest route . we will be there soon .
+
+the quickest route is <stanford_shopping_center:address> and is set .  
+
+you're welcome .
+
+you're welcome , glad to help .
+
+goodbye .
+
+you're welcome; drive carefully .
+
+you're welcome !
+
+you are welcome .
+
+the address for <coupa:poi> is <coupa:address> 
+
+you're welcome , stay safe .
+
+you're welcome !
+
+setting gps to avoid any <home:traffic_info> . your route is now set . 
+
+<valero:poi> is at <valero:address> and <valero:traffic_info> is being noted .  
+
+domino's address is <dominos:address> . 
+
+then let's go at <sigona_farmers_market:poi> , the address is <sigona_farmers_market:address> , i sent it on your screen 
+
+setting quickest route to <sigona_farmers_market:poi> on gps now . 
+
+there is a <coupa:poi> <coupa:distance> away . would you like directions ?  
+
+since there is a <valero:traffic_info> , i found another route for you and i sent it on your screen
+
+the address to <ravenswood_shopping_center:poi> is <ravenswood_shopping_center:address> . 
+
+your <home:poi_type> is at <home:address> . 
+
+only <dominos:poi> is here and there is <dominos:traffic_info> . 
+
+<stanford_shopping_center:poi> is <stanford_shopping_center:distance> away but there is <stanford_shopping_center:traffic_info> on our way . do you want me to set the gps to get there ? 
+
+<stanford_express_care:poi> is just <stanford_express_care:distance> away and there is less traffic on its way than on the other <palo_alto_medical_foundation:poi_type> . do you want me to set the navigation to go there ? 
+
+there is no <starbucks:poi> listed locally , would you like directions to a different coffee shop ? 
+
+i have a <sigona_farmers_market:poi_type> that is <sigona_farmers_market:distance> away . would you like info on it ? 
+
+the nearest <valero:poi_type> is <valero:poi> at <valero:address> , <valero:distance> away . setting directions now .  
+
+there is <ravenswood_shopping_center:poi> <ravenswood_shopping_center:distance> away from here but with <ravenswood_shopping_center:traffic_info> on our way 
+
+there is <sigona_farmers_market:poi> <sigona_farmers_market:distance> away from here but with <sigona_farmers_market:traffic_info> on our way 
+
+your friend jill lives at <jills_house:address> . would you like to navigate there now ? 
+
+<palo_alto_medical_foundation:poi>	and <stanford_express_care:poi> are close . 
+
+<valero:poi> is located at <valero:address> .  
+
+you're welcome !
+
+gps set , have a great day .
+
+you're welcome !
+
+<trader_joes:poi> is at <trader_joes:address> . the only route i have is <trader_joes:distance> through <trader_joes:traffic_info> 
+
+you are welcome .
+
+gps is set . drive carefully .
+
+okay , heading to sigona_farmers_market 
+
+you are welcome .
+
+i sent the best route on your screen , you're welcome !
+
+navigation set , happy to help .
+
+you're welcome , gps set and you should arrive shortly .
+
+<travelers_lodge:poi> is located at <travelers_lodge:address> .  
+
+setting gps now . 
+
+you're welcome !
+
+setting directions to <peets_coffee:poi> at <peets_coffee:address> . now .  
+
+<panda_express:poi> is located at <panda_express:address> but a car collision is noted nearby . do you still want to go there ? 
+
+the address to your <home:poi_type> is <home:address> . 
+
+there is <jills_house:traffic_info> listed on this route . 
+
+the address for <palo_alto_cafe:poi> is <palo_alto_cafe:address> . 
+
+you are welcome .
+
+the closest <sigona_farmers_market:poi_type> is sigona_farmers_market at <sigona_farmers_market:address> . with <sigona_farmers_market:traffic_info> but still is the best option .  
+
+happy to help .
+
+the <travelers_lodge:poi> is <travelers_lodge:distance> away at <travelers_lodge:address> , though there is a <travelers_lodge:traffic_info> . would you like directions there ? 
+
+trader_joes <sigona_farmers_market:poi_type> is <sigona_farmers_market:distance> away at <sigona_farmers_market:address> , there isn't any traffic 
+
+there is a <palo_alto_cafe:poi> nearby . 
+
+your <home:poi_type> is <home:distance> away but there is a <home:traffic_info> , i sent on your screen the best possible route 
+
+the nearest hotel is the <four_seasons:poi> , <four_seasons:address> , it's <four_seasons:distance> away 
+
+the nearest <trader_joes:poi_type> trader_joes is <trader_joes:distance> away with <trader_joes:traffic_info> , do you still want to go ? 
+
+then let's go at <mandarin_root:poi> , <mandarin_roots:address> 
+
+the nearest one is <peets_coffee:poi> , it's <peets_coffee:distance> away but there is a <peets_coffee:traffic_info> 
+
+there is a <panda_express:poi> <panda_express:distance> away: would you like me to send you its address on the screen ? 
+
+we're <home:distance> away from <home:poi_type> and there is <home:traffic_info> on our route , you should reach in few minutes 
+
+you're welcome .
+
+then let's go at <safeway:poi> , better if you get some coffee , the address is <safeway:address> 
+
+you're welcome !
+
+you're welcome , have a great evening .
+
+you're welcome !
+
+you're welcome !
+
+anytime !
+
+avoiding <jing_jing:traffic_info> on the way to <jing_jing:poi> . 
+
+setting route to <pizza_my_heart:poi> at <pizza_my_heart:address> now . 
+
+navigating to <cafe_venetia:address> now . 
+
+i highlighted its address on the map , drive carefully !
+
+then we're going at <starbucks:address> , <starbucks:traffic_info> on our way , enjoy the trip ! 
+
+sorry , i didn't understand which address would you like me to give you . would you prefer to go at <safeway:poi> or at <trader_joes:poi> ? 
+
+there is a <chef_chu's:traffic_info> but i sent on your screen another route that should allow you to reach there fast enough 
+
+anytime !
+
+you're welcome !
+
+<jing_jing:poi> is located at <jing_jing:address> . setting navigation now .  
+
+you're <jills house:distance> away 
+
+<cafe_venetia:poi> located at <cafe_venetia:address> is <cafe_venetia:distance> away without any traffic 
+
+jack lives at <jacks_house:address> , it is shown on the map . 
+
+they are both within <dominos:distance> . <dominos:poi> is <dominos:distance> away and pizza_my_heart is <pizza_my_heart:distance> away .  
+
+yes <ravenswood_shopping_center:poi> is <ravenswood_shopping_center:distance> away . do you want the address ? 
+
+<chef_chu's:poi> is <chef_chu's:distance> away with a <chef_chu's:traffic_info> 
+
+there is <pizza_my_heart:poi> 6 miles away : is it okay for you ? 
+
+anything else ? 
+
+you are two miles away from <starbucks:poi> , would you like to get its address ? 
+
+we are <safeway:distance> away from <safeway:poi> with <safeway:traffic_info> on our way and <safeway:distance> away from trader_joes with <safeway:traffic_info>: where would you like to go ? 
+
+<jing_jing:poi> and <chef_chu's:poi> are both near . 
+
+the nearest <jing_jing:poi_type> is <jing_jing:distance> away , though there is a <jing_jing:traffic_info> . would you like directions there ? 
+
+there is no <starbucks:poi> in the area , i'm sorry .  
+
+<jills house:address> . is the address . 
+
+there is a <dominos:poi> and a <pizza_my_heart:poi> . 
+
+you're welcome !
+
+you're welcome; drive safely , and enjoy .
+
+happy to help .
+
+bye for now .
+
+i sent the route on your screen , drive carefully ! 
+
+the address is <ravenswood_shopping_center:address> , i picked the fastest route for you , it's on your screen 
+
+no problem
+
+anytime !
+
+you're welcome !
+
+okay , heading to <town_and_country:poi> at <town_and_country:address>
+
+the address to <dish_parking:poi> is <dish_parking:address> . 
+
+<ravenswood_shopping_center:poi> is located at <ravenswood_shopping_center:address> . do you want me to set the gps ? 
+
+the quickest route to <dominos:poi> is with <dominos:traffic_info> to <dominos:address> .  
+
+anytime !
+
+the quickest route to <trader_joes:poi> is 1 mile away at <trader_joes:address>nue .  
+
+<mandarin_roots:poi> is <mandarin_roots:distance> away in <mandarin_roots:traffic_info> , it is located at <mandarin_roots:address> . 
+
+you're welcome , stay safe .
+
+<palo_alto_medical_foundation:poi> is at <palo_alto_medical_foundation:address> . 
+
+unfortunately there is a <town_and_country:traffic_info> but i sent on your screen another route to reach faster 
+
+<town_and_country:poi> is closer . 
+
+<dish_parking:poi> has <dish_parking:traffic_info> and is the only local one , is it okay ? 
+
+<valero:poi> is at <valero:address> . 
+
+there is <dominos:poi> <dominos:distance> away: does it sound good ? 
+
+there is two <town_and_country:poi_type> , <town_and_country:poi> and <stanford_shopping_center:poi> . do you have a preference ? 
+
+two <ravenswood_shopping_center:poi_type>s are located nearby . one is the <topanga_mall:poi> located <ravenswood_shopping_center:distance> away and the other is <ravenswood_shopping_center:poi> that's <ravenswood_shopping_center:distance> away . which do you prefer ? 
+
+we're <trader_joes:distance> away drom trader_joes and there is <trader_joes:traffic_info> on our way 
+
+<palo_alto_medical_foundation:poi> is the nearby <palo_alto_medical_foundation:poi_type> . 
+
+i have one <valero:poi_type> listed . want more info ? 
+
+the closest is <travelers_lodge:poi> <travelers_lodge:distance> away , then <the_clement_hotel:poi> <the_clement_hotel:distance> away , <four_seasons:poi> is <four_seasons:distance> away and <the_westin:poi> is <the_westin:distance> away . 
+
+there are two <mandarin_roots:poi_type>s nearby <mandarin_roots:poi> <mandarin_roots:distance> away and <chef_chu's:poi> <chef_chu's:distance> away
+
+<town_and_country:poi> is a <town_and_country:poi_type> i can find . it is located at <town_and_country:address> 
+
+the nearest one is <dish_parking:poi> , it's <dish_parking:distance> away 
+
+you are very welcome
+
+you are welcome driver !
+
+navigation set . have a great day .
+
+you are welcome
+
+the_westin is located at <the_westin:address> . setting navigation now . 
+
+shortest route found and being set . you will arrive shortly .
+
+the address for <comfort_inn:poi> is <comfort_inn:address> . 
+
+no problem !
+
+i sent you the info on your screen , please drive carefully !
+
+setting gps now . 
+
+<pizza_hut:poi> is the quickest . navigating to <pizza_hut:address> . there is <pizza_hut:traffic_info> on the route .  
+
+there is a <travelers_lodge:traffic_info> on the route to <travelers_lodge:address> . would you like directions there ? 
+
+we're going to <pizza_chicago:address> , there is <pizza_chicago:traffic_info> and you should be able to reach in few minutes . and you're welcome , i'm here to assist you !
+
+you're welcome !
+
+you are welcome .
+
+<the_westin:poi> appears to be the fastest at <the_westin:distance> away and <the_westin:traffic_info> . do you need the address ? 
+
+<starbucks:poi> is at <starbucks:address> . 
+
+its address is <stanford_childrens_health:address> , unfortunately there is <stanford_childrens_health:traffic_info> on our way: what to do ? 
+
+you are welcome
+
+yes the route to <palo_alto_medical_foundation:address> is the quickest available .  
+
+there is <coupa:poi> , it's just <coupa:distance> away but there is <coupa:traffic_info> on our way 
+
+the fastest route to the <stanford_childrens_health:poi_type> is <stanford_childrens_health:address> . at <stanford_childrens_health:distance> away with a <stanford_childrens_health:traffic_info> . do you want to go to <stanford_childrens_health:poi> ? 
+
+the nearest <stanford_childrens_health:poi_type> is <stanford_childrens_health:distance> away at <stanford_childrens_health:address> , there is <stanford_childrens_health:traffic_info> on the way .  
+
+there is <comfort_inn:poi> <comfort_inn:distance> away but with <comfort_inn:traffic_info> on its direction: do you want me to set the navigation there ? 
+
+we're <pizza_hut:distance> away from <pizza_hut:poi> and <hotel_keen:distance> away from <hotel_keen:poi> : do they sound good ? 
+
+i have a listing for a <stanford_childrens_health:poi_type> named <stanford_childrens_health:poi> and its <stanford_childrens_health:distance> away . 
+
+you have three possible <four_seasons:poi_type> , one <four_seasons:distance> away , one <the_westin:distance> away , and one <hotel_keen:distance> away 
+
+the nearest <valero:poi_type> is <valero:poi> at <valero:distance> away but a road block is nearby .  
+
+<pizza_chicago:poi> is the closest pizza , would you like the address ? 
+
+<palo_alto_medical_foundation:poi> is the nearest <palo_alto_medical_foundation:poi_type> at <palo_alto_medical_foundation:address> . 
+
+navigating you to <starbucks:poi> . 
+
+there is no <starbucks:poi> nearby . 
+
+you're welcome !
+
+you're welcome !
+
+happy to help
+
+you're welcome , happy to help .
+
+you're welcome , glad i could help .
+
+setting route to <the_clement_hotel:address>nue now .  
+
+coupa is located at <coupa:address> . setting the fastest route on gps .  
+
+i sent the best available route on your screen , drive carefully ! 
+
+taking you there on the shortest distance . 
+
+i sent the info on your screen , you're welcome !
+
+you're welcome , happy i could help .
+
+you're welcome , glad i could help .
+
+you're welcome , happy to help .
+
+okay , we're on the way now ! 
+
+you're welcome !
+
+we're <home:distance> away and there is <home:traffic_info> , i sent the route on your screen , keep your eyes open on the road ! 
+
+sure , it's just <the_clement_hotel:distance> away at <the_clement_hotel:address>nue . 
+
+safeway is at <safeway:address> 
+
+<jills_house_address> , it's <jills_house:distance> away , i sent his address on your screen 
+
+<comfort_inn:poi> route is reporting a <comfort_inn:traffic_info> . do you still want to go there ? 
+
+setting gps to quickest route for <jing_jing:poi> which has <jing_jing:traffic_info> . 
+
+there is <jills_house:traffic_info> on the way to <jills_house:poi> . 
+
+jack is closer . 
+
+the <palo_alto_cafe:poi> is located at <palo_alto_cafe:address> , it is <palo_alto_cafe:distance> away with <palo_alto_cafe:traffic_info> 
+
+<sigona_farmers_market:poi> is the only <sigona_farmers_market:poi_type> i can find . it is <sigona_farmers_market:distance> away . 
+
+jill or jack ? 
+
+<comfort_inn:poi> is <comfort_inn:distance> away . 
+
+navigating you to <jing_jing:poi> . 
+
+<jills_house:poi> is located at <jills_house:address> . anything else ? 
+
+<the_clement_hotel:poi> is <the_clement_hotel:distance> away . 
+
+we're <safeway:distance> away from <safeway:poi> and there is <safeway:traffic_info> on our way: set the gps to go there ? 
+
+you live at <home:address> . 
+
+you're very welcome !
+
+ok , setting navigation now .  
+
+you're very welcome !
+
+2 miles away 
+
+great , glad to help .
+
+anytime !
+
+navigation is set . drive carefully , and enjoy .  
+
+you're welcome !
+
+<philz:poi> is <philz:distance> away at <philz:address>nue . anything else ? 
+
+setting directions to <home:poi> now .  
+
+unfortunately there is a <cafe_venetia:traffic_info> . do you want me to set the gps anyway ? 
+
+you are welcome
+
+you are welcome .
+
+i sent its position on your screen , drive carefully !
+
+setting navigation to <papa_johns:poi> at <papa_johns:address> . anything else ? 
+
+alright , the route to <jing_jing:address>ive is <jing_jing:distance> away with a <jing_jing:traffic_info> 
+
+you're welcome !
+
+setting directions to <coupa:poi> , located <coupa:distance> away at <coupa:address> 
+
+the nearest coffee shop is <philz:distance> away and the name of it is <philz:poi> . would you like the address ? 
+
+there is a car collision reported on the route to <cafe_venetia:poi> .  
+
+the nearest <four_seasons:poi_type> is at <four_seasons:address> . 
+
+<papa_johns:poi> is closer at <papa_johns:distance> . 
+
+the route to <home:poi_type> does not have any traffic , you should arrive quickly being that it is 1 mile away . 
+
+<topanga_mall:poi> is the only one nearby but here is <topanga_mall:traffic_info> . 
+
+there is a <jing_jing:poi> <jing_jing:distance> away . 
+
+in this moment there is <home:traffic_info> on our way but since we're just <home:distance> away it shouldn't take too long to reach <home:poi_type> . i sent the route on your screen 
+
+there is a <round_table:poi> and <papa_johns:poi> near . 
+
+home is programmed as <home:address> .  
+
+the nearest coffee shop is <cafe_venetia:poi> on <cafe_venetia:address> 
+
+there is no <starbucks:poi> in your area but there are other coffee places near by . would you like more info ? 
+
+there are no nearby <starbucks:poi> , but there are 3 other coffee places nearby .  
+
+there is a <four_seasons:poi> and a <hotel_keen:poi> nearby . 
+
+the info are on your screen and you're welcome !
+
+you're welcome !
+
+you're welcome !
+
+<valero:poi> is located at <valero:address> and has a road block reported .  
+
+plotting route to <chevron:address> , <chevron:distance> away with <chevron:traffic_info> 
+
+you're welcome !
+
+directions to <valero:poi> are on your screen . 
+
+its address is <town_and_country:address> , i sent the position on your screen 
+
+navigation is set , have a great day .
+
+taking you on the quickest way <home:poi_type> . 
+
+no problem
+
+you're welcome !
+
+<chevron:address>: do you want me to send the route on your screen ? 
+
+displaying gps now .  
+
+currently the quickest route to <panda_express:poi> is through <panda_express:traffic_info> . should i set the gps now ?
+
+gps set . anything else ? 
+
+here is the best route to <chevron:poi> . 
+
+<jing_jing:poi> is at <jing_jing:address> . do you need me to set the navigation ? 
+
+you're welcome .
+
+unfortunately <teavana:poi> is the only coffee place i can find . it is <teavana:distance> away through <teavana:traffic_info> , located at <teavana:address> 
+
+<stanford_shopping_center:poi> is only <stanford_shopping_center:distance> away and <town_and_country:poi> is <town_and_country:address> away .  
+
+the <four_seasons:poi> hotel is located at <four_seasons:address> . 
+
+<jills_house:poi> is <jills_house:distance> away , while <jacks_house:poi> is <jacks_house:distance> . there is <jills_house:traffic_info> to both locations . 
+
+the only route i currently have to <home:poi_type> currently has <home:traffic_info> . would you like me to set your gps anyway ? 
+
+there is 2 <valero:poi_type> nearby one has a road block noted and the other is <valero:distance> away with <valero:traffic_info> . which do you prefer ? 
+
+<jing_jing:poi> is <jing_jing:distance> away in light traffic . would you like directions there ?  
+
+<stanford_shopping_center:poi> and <town_and_country:poi> are both near . 
+
+<teavana:poi> is <teavana:distance> away . 
+
+there is a <chevron:poi_type> <chevron:distance> away . it's <chevron:poi> . would you like more details ? 
+
+the nearest hotel is the <four_seasons:poi> . 
+
+<chef_chu's:poi> located at <chef_chu's:address> is <chef_chu's:distance> away , there isn't any traffic on this route 
+
+jack or jill ? 
+
+you're welcome !
+
+i sent the best route on your screen , enjoy your trip ! 
+
+you're welcome !
+
+i sent the info on your screen , you're welcome !
+
+setting navigation now . enjoy ! 
+
+<panda_express:poi> is located at <panda_express:address> 
+
+jing_jing is at <jing_jing:address> . there is a <jing_jing:traffic_info> . shall i give you directions ? 
+
+you're welcome !
+
+you are welcome .
+
+you're welcome !
+
+you're welcome !
+
+you're welcome .
+
+no , <panda_express:poi> is the only one i have listed . 
+
+yes , i will navigate you via the fastest route . 
+
+you're welcome .
+
+the address of <p.f._changs:poi> is <p.f._changs:address> . we should be there shortly .  
+
+the <palo_alto_cafe:poi> is reporting <palo_alto_cafe:traffic_info> but i will still find the quickest route to <palo_alto_cafe:address> .  
+
+the address to your <home:poi_type> is <home:address> . setting gps for the fastest route now . 
+
+there isn't any traffic , heading to <starbucks:address> 
+
+setting navigation to <civic_center_garage:address> now .  
+
+i sent its position and the route to reach it on your screen , don't speed too much 
+
+p.f . changs has <p.f._changs:traffic_info> at the moment . i am setting the navigation and we should arrive soon .  
+
+currently the quickest route to <panda_express:poi> is through <panda_express:traffic_info> . should i set the gps now ? 
+
+here is a route to <starbucks:poi> , <starbucks:distance> away . 
+
+navigating you <home:poi_type> with the least traffic . 
+
+we're <jing_jing:distance> away from <jing_jing:poi> and <p.f.changs:distance> away from <p.f.changs:poi>: which one do you like more ? 
+
+<panda_express:poi> is a <panda_express:poi_type> nearby . 
+
+the closest <p.f._changs:poi_type> seems to be <p.f._chang's:poi> at <p.f._changs:distance> away with <p.f._changs:traffic_info> . do you want the address ? 
+
+we are <safeway:distance> away from <safeway:poi>: do you want me to send you its address on screen ? 
+
+there is the <p.f._changs:poi_type> <p.f._changs:poi> at <p.f._changs:address> , it's just <p.f._changs:distance> away 
+
+we're <civic_center_garage:distance> away from <civic_center_garage:poi> and there is also a <civic_center_garage:traffic_info>: do you want me to find a quickest way to go there ? 
+
+there is no <starbucks:poi> nearby , the <palo_alto_cafe:poi> is <palo_alto_cafe:distance> away . would you like directions there ?  
+
+you're welcome !
+
+you're welcome !
+
+no problem driver .
+
+you're welcome , glad to help .
+
+<stanford_oval_parking:poi> is located at <stanford_oval_parking:address> , i sent its position with the quickest route on your screen 
+
+you're welcome !
+
+that is still the closest <76:poi_type> . 
+
+safeway is located at <safeway:address> . with <safeway:traffic_info> . setting gps now .  
+
+<jing_jing:poi> is <jing_jing:distance> at <jing_jing:address>ive . we shouldn't be long in getting there .  
+
+you're welcome; drive carefully , and enjoy
+
+anytime !
+
+i sent the info on your screen , drive carefully !
+
+<topanga_mall:poi> is located at <topanga_mall:address> . want me to set the gps ? 
+
+stanford_express_care is located at <stanford_express_care:address> . 
+
+the <76:poi> is located at <76:address>; it is <76:distance> away in <76:traffic_info> . 
+
+you're welcome !
+
+setting navigation now . there is <cafe_venetia:traffic_info> , so drive carefully . 
+
+there is <town_and_country:traffic_info> .  
+
+you're welcome !
+
+yes that route has <jills_house:traffic_info> noted .  
+
+<town_and_country:poi> is the closest . 
+
+you're welcome !
+
+there is a <dish_parking:poi_type> but there is a car collison nearby that could delay your arrival but only one listed in area . do you want the details ? 
+
+the nearest <panda_express:poi_type> is <panda_express:poi> at <panda_express:address> . 
+
+<stanford_express_care:poi> is a <stanford_express_care:poi_type> that is <stanford_express_care:distance> away . need more info ? 
+
+there is <jing_jing:poi> <jing_jing:distance> away and <panda_express:poi> <panda_express:distance> away: which one do you prefer ? 
+
+i have a listing for a <topanga_mall:poi_type> that is <topanga_mall:distance> away . want more info ? 
+
+there are 2 <valero:poi_type> near you , woud you like the closest one ? 
+
+jill lives at <jills_house:address> . 
+
+<5677_springer_street:poi> is <5677_springer_street:distance> away with <5677_springer_street:traffic_info> . 
+
+home is at <home:address> . 
+
+the nearest coffee place is <cafe_venetia:poi> at <cafe_venetia:address> 
+
+okay
